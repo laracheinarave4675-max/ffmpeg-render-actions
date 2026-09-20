@@ -20,8 +20,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-- name: Install ffmpeg
+
+      - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Run render
         env:
           PAYLOAD_B64: ${{ inputs.payload_b64 }}
