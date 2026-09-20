@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "error": "Bad control character in string literal in JSON at position 71"
+}
