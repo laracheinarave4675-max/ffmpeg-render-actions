@@ -127,7 +127,7 @@ function escText(s) {
 }
 
 async function main() {
-  const payload = JSON.parse(process.env.PAYLOAD_JSON);
+  const payload = JSON.parse(Buffer.from(process.env.PAYLOAD_B64, 'base64').toString('utf8'));
   const saKey = JSON.parse(process.env.GDRIVE_SA_KEY);
   const clips = payload.clips || [];
   const workDir = path.join(process.cwd(), 'work');
