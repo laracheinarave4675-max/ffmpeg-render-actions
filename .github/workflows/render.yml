@@ -3,8 +3,8 @@ name: Render Video
 on:
   workflow_dispatch:
     inputs:
-      payload:
-        description: 'JSON payload: clips[], narration_url, music_url, music_volume, transitions, transition_duration, transition_type, ken_burns, filename'
+      payload_b64:
+        description: 'Base64-encoded JSON payload'
         required: true
         type: string
 
@@ -23,7 +23,7 @@ jobs:
 
       - name: Run render
         env:
-          PAYLOAD_JSON: ${{ inputs.payload }}
+          PAYLOAD_B64: ${{ inputs.payload_b64 }}
           GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
         run: node render.js
 
