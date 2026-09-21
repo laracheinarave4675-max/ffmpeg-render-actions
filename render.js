@@ -1,7 +1,6 @@
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 function run(cmd) {
   return new Promise((resolve, reject) => {
@@ -32,30 +31,15 @@ async function downloadFile(url, dest) {
   fs.writeFileSync(dest, buf);
 }
 
-// ---- Google service-account auth (no external deps) ----
-function base64url(input) {
-  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function getAccessToken(saKey, scope) {
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const claim = {
-    iss: saKey.client_email,
-    scope,
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600
-  };
-  const unsigned = base64url(JSON.stringify(header)) + '.' + base64url(JSON.stringify(claim));
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(unsigned);
-  const signature = signer.sign(saKey.private_key).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const jwt = unsigned + '.' + signature;
+// ---- Google OAuth (user account) auth ----
+async function getAccessToken(oauthCreds) {
   const resp = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=' + jwt
+    body: 'client_id=' + encodeURIComponent(oauthCreds.client_id) +
+      '&client_secret=' + encodeURIComponent(oauthCreds.client_secret) +
+      '&refresh_token=' + encodeURIComponent(oauthCreds.refresh_token) +
+      '&grant_type=refresh_token'
   });
   const json = await resp.json();
   if (!json.access_token) throw new Error('Failed to get access token: ' + JSON.stringify(json));
@@ -121,14 +105,14 @@ async function uploadToDrive(accessToken, filePath, filename, folderId) {
   return finalJson.id;
 }
 
-// ---- Main render pipeline (same logic as the Replit ffmpeg service) ----
+// ---- Main render pipeline ----
 function escText(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "\\'");
 }
 
 async function main() {
   const payload = JSON.parse(Buffer.from(process.env.PAYLOAD_B64, 'base64').toString('utf8'));
-  const saKey = JSON.parse(Buffer.from(process.env.GDRIVE_SA_KEY_B64, 'base64').toString('utf8'));
+  const oauthCreds = JSON.parse(Buffer.from(process.env.GDRIVE_OAUTH_B64, 'base64').toString('utf8'));
   const clips = payload.clips || [];
   const workDir = path.join(process.cwd(), 'work');
   fs.mkdirSync(workDir, { recursive: true });
@@ -256,7 +240,7 @@ async function main() {
   console.log('Render complete: ' + finalPath + ' (' + Math.round(fs.statSync(finalPath).size / 1024 / 1024) + ' MB)');
 
   console.log('Authenticating with Google Drive...');
-  const accessToken = await getAccessToken(saKey, 'https://www.googleapis.com/auth/drive');
+  const accessToken = await getAccessToken(oauthCreds);
   const folderId = await findOrCreateFolder(accessToken, 'StarVideoProject');
   const filename = payload.filename || ('render_' + Date.now() + '.mp4');
   console.log('Uploading to Drive as ' + filename + '...');
