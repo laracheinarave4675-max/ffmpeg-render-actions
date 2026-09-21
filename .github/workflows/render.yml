@@ -27,7 +27,7 @@ jobs:
       - name: Run render
         env:
           PAYLOAD_B64: ${{ inputs.payload_b64 }}
-          GDRIVE_SA_KEY_B64: ${{ secrets.GDRIVE_SA_KEY }}
+          GDRIVE_OAUTH_B64: ${{ secrets.GDRIVE_OAUTH_B64 }}
         run: node render.js
 
       - name: Commit result JSON
