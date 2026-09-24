@@ -11,6 +11,14 @@ function run(cmd) {
   });
 }
 
+// Measure the real duration (seconds) of a media file with ffprobe
+async function probeDuration(file) {
+  const out = await run('ffprobe -v error -show_entries format=duration -of csv=p=0 "' + file + '"');
+  const d = parseFloat(String(out).trim());
+  if (!isFinite(d) || d <= 0) throw new Error('Could not probe duration of ' + file);
+  return d;
+}
+
 async function downloadFile(url, dest) {
   let res = await fetch(url);
   if (!res.ok) throw new Error('Failed to download ' + url + ': HTTP ' + res.status);
@@ -132,23 +140,29 @@ async function main() {
     await downloadFile(clip.src, srcPath);
     const segPath = path.join(workDir, 'seg_' + i + '.mp4');
     if (clip.type === 'image') {
-      const frames = Math.round(clip.duration * 25);
+      const imgDur = clip.duration || 5;
+      const frames = Math.round(imgDur * 25);
       if (kenBurns) {
         const zoomDir = i % 2 === 0 ? 'min(zoom+0.0012,1.4)' : 'if(lte(zoom,1.0),1.4,max(1.0,zoom-0.0012))';
-        await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z=\'' + zoomDir + '\':d=' + frames + ':s=1920x1080:fps=25,format=yuv420p" -c:v libx264 -t ' + clip.duration + ' -r 25 "' + segPath + '" -y');
+        await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z=\'' + zoomDir + '\':d=' + frames + ':s=1920x1080:fps=25,format=yuv420p" -c:v libx264 -t ' + imgDur + ' -r 25 "' + segPath + '" -y');
       } else {
-        await run('ffmpeg -loop 1 -i "' + srcPath + '" -c:v libx264 -t ' + clip.duration + ' -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 "' + segPath + '" -y');
+        await run('ffmpeg -loop 1 -i "' + srcPath + '" -c:v libx264 -t ' + imgDur + ' -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 "' + segPath + '" -y');
       }
     } else {
+      // If no duration is given, use the real length of the source video
+      const srcDur = await probeDuration(srcPath);
+      const vDur = clip.duration || srcDur;
       if (clip.keep_audio) {
-        await run('ffmpeg -i "' + srcPath + '" -t ' + clip.duration + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -c:a aac -b:a 192k -ar 44100 -ac 2 "' + segPath + '" -y');
+        await run('ffmpeg -i "' + srcPath + '" -t ' + vDur + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -c:a aac -b:a 192k -ar 44100 -ac 2 "' + segPath + '" -y');
       } else {
-        await run('ffmpeg -stream_loop -1 -i "' + srcPath + '" -t ' + clip.duration + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -an "' + segPath + '" -y');
+        await run('ffmpeg -stream_loop -1 -i "' + srcPath + '" -t ' + vDur + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -an "' + segPath + '" -y');
       }
     }
     segmentFiles.push(segPath);
-    segDurations.push(clip.duration);
-    console.log('Segment ' + (i + 1) + '/' + clips.length + ' done');
+    // Always use the measured duration of the finished segment so transition offsets are exact
+    const segDur = await probeDuration(segPath);
+    segDurations.push(segDur);
+    console.log('Segment ' + (i + 1) + '/' + clips.length + ' done (' + segDur.toFixed(2) + 's)');
   }
 
   const concatPath = path.join(workDir, 'concat.mp4');
@@ -169,13 +183,18 @@ async function main() {
       prevLabel = outLabel;
     }
     if (allHaveAudio) {
-      const audioIn = segmentFiles.map((f, i) => '[' + i + ':a]').join('');
-      filterChain += audioIn + 'concat=n=' + segmentFiles.length + ':v=0:a=1[aout];';
+      // Cross-fade the audio with the same overlap as the video so sound stays in sync
+      let aPrev = '0:a';
+      for (let i = 1; i < segmentFiles.length; i++) {
+        const aOut = i === segmentFiles.length - 1 ? 'aout' : 'a' + i;
+        filterChain += '[' + aPrev + '][' + i + ':a]acrossfade=d=' + transDur + ':c1=tri:c2=tri[' + aOut + '];';
+        aPrev = aOut;
+      }
     }
     filterChain = filterChain.slice(0, -1);
     const mapArgs = allHaveAudio
-      ? '-map "[vout]" -map "[aout]" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k'
-      : '-map "[vout]" -c:v libx264 -pix_fmt yuv420p';
+      ? '-map "[vout]" -map "[aout]" -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k'
+      : '-map "[vout]" -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p';
     await run('ffmpeg ' + inputsArg + ' -filter_complex "' + filterChain + '" ' + mapArgs + ' "' + concatPath + '" -y');
   } else {
     const listPath = path.join(workDir, 'list.txt');
