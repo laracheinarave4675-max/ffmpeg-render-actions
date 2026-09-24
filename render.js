@@ -19,6 +19,40 @@ async function probeDuration(file) {
   return d;
 }
 
+// Ending: voice finishes first, music fades out, then the picture fades to black at the very end.
+// Used only when a clip in the payload carries "end_fade" (true or {tail, music_fade, video_fade}).
+async function mixWithEnding(o) {
+  const V = await probeDuration(o.videoPath);
+  const N = o.narrPath ? await probeDuration(o.narrPath) : 0;
+  const T = Math.max(V, N + o.tail);
+  const ext = Math.max(0, T - V);
+  const AFc = 'aformat=sample_rates=44100:channel_layouts=stereo';
+  const chains = [];
+  let inputs = '-i "' + o.videoPath + '"';
+  let idx = 1;
+  const labels = [];
+  chains.push('[0:v]' + (ext > 0.05 ? 'tpad=stop_mode=clone:stop_duration=' + ext.toFixed(3) + ',' : '') +
+    'fade=t=out:st=' + Math.max(0, T - o.vFade).toFixed(3) + ':d=' + o.vFade + '[v]');
+  if (o.narrPath) {
+    inputs += ' -i "' + o.narrPath + '"';
+    chains.push('[' + idx + ':a]' + AFc + ',apad=whole_dur=' + T.toFixed(3) + '[na]');
+    labels.push('[na]');
+    idx++;
+  }
+  if (o.musicPath) {
+    inputs += ' -stream_loop -1 -i "' + o.musicPath + '"';
+    const fadeSt = Math.max(0, T - 1 - o.mFade);
+    chains.push('[' + idx + ':a]volume=' + o.musicVol + ',' + AFc + ',atrim=0:' + T.toFixed(3) + ',afade=t=out:st=' + fadeSt.toFixed(3) + ':d=' + o.mFade + '[music]');
+    labels.push('[music]');
+    idx++;
+  }
+  chains.push(labels.length === 2
+    ? labels.join('') + 'amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[aout]'
+    : labels[0] + 'anull[aout]');
+  await run('ffmpeg ' + inputs + ' -filter_complex "' + chains.join(';') + '" -map "[v]" -map "[aout]" -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -t ' + T.toFixed(3) + ' "' + o.outPath + '" -y');
+  return T;
+}
+
 async function downloadFile(url, dest) {
   let res = await fetch(url);
   if (!res.ok) throw new Error('Failed to download ' + url + ': HTTP ' + res.status);
@@ -234,7 +268,39 @@ async function main() {
   const AF = 'aformat=sample_rates=44100:channel_layouts=stereo';
   console.log('Mixing audio...');
 
-  if (payload.narration_url && payload.music_url) {
+  // Ending settings: any clip with end_fade (true or an object) turns the ending on
+  const endClip = clips.find(c => c && c.end_fade);
+  const endCfg = endClip ? (typeof endClip.end_fade === 'object' ? endClip.end_fade : {}) : null;
+  const endTail = endCfg && endCfg.tail !== undefined ? endCfg.tail : 6;
+  const endVFade = endCfg && endCfg.video_fade ? endCfg.video_fade : 2;
+  const endMFade = endCfg && endCfg.music_fade ? endCfg.music_fade : 3;
+
+  if (endCfg && (payload.narration_url || payload.music_url)) {
+    let narrPath = null;
+    let musicPath = null;
+    if (payload.narration_url) {
+      narrPath = path.join(workDir, 'narration.mp3');
+      await downloadFile(payload.narration_url, narrPath);
+    }
+    if (payload.music_url) {
+      musicPath = path.join(workDir, 'music.mp3');
+      await downloadFile(payload.music_url, musicPath);
+    }
+    finalPath = path.join(workDir, 'final.mp4');
+    const T = await mixWithEnding({
+      videoPath, narrPath, musicPath,
+      musicVol: payload.music_volume || (narrPath ? 0.15 : 0.3),
+      outPath: finalPath, tail: endTail, vFade: endVFade, mFade: endMFade
+    });
+    console.log('Ending applied, total length ' + T.toFixed(1) + 's');
+  } else if (endCfg && !payload.narration_url && !payload.music_url) {
+    // Merge of finished parts (sound already inside): fade the picture and the sound out at the very end
+    const V = await probeDuration(videoPath);
+    finalPath = path.join(workDir, 'final.mp4');
+    const audioFade = allHaveAudio ? ' -af "afade=t=out:st=' + Math.max(0, V - endMFade).toFixed(3) + ':d=' + endMFade + '" -c:a aac -b:a 192k' : '';
+    await run('ffmpeg -i "' + videoPath + '" -vf "fade=t=out:st=' + Math.max(0, V - endVFade).toFixed(3) + ':d=' + endVFade + '"' + audioFade + ' -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p "' + finalPath + '" -y');
+    console.log('Ending applied (fade only), total length ' + V.toFixed(1) + 's');
+  } else if (payload.narration_url && payload.music_url) {
     const narrPath = path.join(workDir, 'narration.mp3');
     const musicPath = path.join(workDir, 'music.mp3');
     await downloadFile(payload.narration_url, narrPath);
