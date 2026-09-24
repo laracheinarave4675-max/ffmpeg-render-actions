@@ -271,7 +271,7 @@ async function main() {
   // Ending settings: any clip with end_fade (true or an object) turns the ending on
   const endClip = clips.find(c => c && c.end_fade);
   const endCfg = endClip ? (typeof endClip.end_fade === 'object' ? endClip.end_fade : {}) : null;
-  const endTail = endCfg && endCfg.tail !== undefined ? endCfg.tail : 6;
+  const endTail = endCfg && endCfg.tail !== undefined ? endCfg.tail : 4;
   const endVFade = endCfg && endCfg.video_fade ? endCfg.video_fade : 2;
   const endMFade = endCfg && endCfg.music_fade ? endCfg.music_fade : 3;
 
@@ -294,12 +294,15 @@ async function main() {
     });
     console.log('Ending applied, total length ' + T.toFixed(1) + 's');
   } else if (endCfg && !payload.narration_url && !payload.music_url) {
-    // Merge of finished parts (sound already inside): fade the picture and the sound out at the very end
+    // Finished parts (sound already inside): the sound simply ends, the picture holds for the tail, then fades to black
     const V = await probeDuration(videoPath);
+    const T = V + endTail;
     finalPath = path.join(workDir, 'final.mp4');
-    const audioFade = allHaveAudio ? ' -af "afade=t=out:st=' + Math.max(0, V - endMFade).toFixed(3) + ':d=' + endMFade + '" -c:a aac -b:a 192k' : '';
-    await run('ffmpeg -i "' + videoPath + '" -vf "fade=t=out:st=' + Math.max(0, V - endVFade).toFixed(3) + ':d=' + endVFade + '"' + audioFade + ' -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p "' + finalPath + '" -y');
-    console.log('Ending applied (fade only), total length ' + V.toFixed(1) + 's');
+    const vChain = '[0:v]tpad=stop_mode=clone:stop_duration=' + endTail.toFixed(3) + ',fade=t=out:st=' + Math.max(0, T - endVFade).toFixed(3) + ':d=' + endVFade + '[v]';
+    const aChain = allHaveAudio ? ';[0:a]apad=whole_dur=' + T.toFixed(3) + '[a]' : '';
+    const maps = allHaveAudio ? '-map "[v]" -map "[a]" -c:a aac -b:a 192k' : '-map "[v]"';
+    await run('ffmpeg -i "' + videoPath + '" -filter_complex "' + vChain + aChain + '" ' + maps + ' -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -t ' + T.toFixed(3) + ' "' + finalPath + '" -y');
+    console.log('Ending applied (voice ends, picture holds ' + endTail + 's then fades), total length ' + T.toFixed(1) + 's');
   } else if (payload.narration_url && payload.music_url) {
     const narrPath = path.join(workDir, 'narration.mp3');
     const musicPath = path.join(workDir, 'music.mp3');
