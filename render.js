@@ -165,6 +165,40 @@ async function main() {
   const transType = payload.transition_type || 'fade';
   const segmentFiles = [];
   const segDurations = [];
+  const srcPaths = [];
+
+  // Ending settings: any clip with end_fade (true or an object) turns the ending on
+  const endClip = clips.find(c => c && c.end_fade);
+  const endCfg = endClip ? (typeof endClip.end_fade === 'object' ? endClip.end_fade : {}) : null;
+  const endTail = endCfg && endCfg.tail !== undefined ? endCfg.tail : 4;
+  const endVFade = endCfg && endCfg.video_fade ? endCfg.video_fade : 2;
+  const endMFade = endCfg && endCfg.music_fade ? endCfg.music_fade : 3;
+
+  // Builds one segment (used for every clip, and to lengthen the last one)
+  async function makeSegment(clip, i, srcPath, segPath, dur) {
+    if (clip.type === 'image') {
+      const frames = Math.round(dur * 25);
+      if (kenBurns) {
+        const zoomDir = i % 2 === 0 ? 'min(zoom+0.0012,1.4)' : 'if(lte(zoom,1.0),1.4,max(1.0,zoom-0.0012))';
+        await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z=\'' + zoomDir + '\':d=' + frames + ':s=1920x1080:fps=25,format=yuv420p" -c:v libx264 -t ' + dur + ' -r 25 "' + segPath + '" -y');
+      } else {
+        await run('ffmpeg -loop 1 -i "' + srcPath + '" -c:v libx264 -t ' + dur + ' -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 "' + segPath + '" -y');
+      }
+    } else if (clip.keep_audio) {
+      await run('ffmpeg -i "' + srcPath + '" -t ' + dur + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -c:a aac -b:a 192k -ar 44100 -ac 2 "' + segPath + '" -y');
+    } else {
+      await run('ffmpeg -stream_loop -1 -i "' + srcPath + '" -t ' + dur + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -an "' + segPath + '" -y');
+    }
+  }
+
+  // Measure the narration first, so the picture always covers the whole voice
+  let narrLen = 0;
+  if (payload.narration_url) {
+    const earlyNarr = path.join(workDir, 'narration_early.mp3');
+    await downloadFile(payload.narration_url, earlyNarr);
+    narrLen = await probeDuration(earlyNarr);
+    console.log('Narration length ' + narrLen.toFixed(1) + 's');
+  }
 
   for (let i = 0; i < clips.length; i++) {
     const clip = clips[i];
@@ -172,31 +206,31 @@ async function main() {
     const srcPath = path.join(workDir, 'src_' + i + '.' + ext);
     console.log('Downloading clip ' + i + '...');
     await downloadFile(clip.src, srcPath);
+    srcPaths.push(srcPath);
     const segPath = path.join(workDir, 'seg_' + i + '.mp4');
-    if (clip.type === 'image') {
-      const imgDur = clip.duration || 5;
-      const frames = Math.round(imgDur * 25);
-      if (kenBurns) {
-        const zoomDir = i % 2 === 0 ? 'min(zoom+0.0012,1.4)' : 'if(lte(zoom,1.0),1.4,max(1.0,zoom-0.0012))';
-        await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z=\'' + zoomDir + '\':d=' + frames + ':s=1920x1080:fps=25,format=yuv420p" -c:v libx264 -t ' + imgDur + ' -r 25 "' + segPath + '" -y');
-      } else {
-        await run('ffmpeg -loop 1 -i "' + srcPath + '" -c:v libx264 -t ' + imgDur + ' -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 "' + segPath + '" -y');
-      }
-    } else {
-      // If no duration is given, use the real length of the source video
-      const srcDur = await probeDuration(srcPath);
-      const vDur = clip.duration || srcDur;
-      if (clip.keep_audio) {
-        await run('ffmpeg -i "' + srcPath + '" -t ' + vDur + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -c:a aac -b:a 192k -ar 44100 -ac 2 "' + segPath + '" -y');
-      } else {
-        await run('ffmpeg -stream_loop -1 -i "' + srcPath + '" -t ' + vDur + ' -c:v libx264 -pix_fmt yuv420p -vf "scale=' + RES + ':force_original_aspect_ratio=decrease,pad=' + RES + ':(ow-iw)/2:(oh-ih)/2" -r 25 -an "' + segPath + '" -y');
-      }
-    }
+    // If no duration is given, use the real length of the source video
+    const dur = clip.duration || (clip.type === 'video' ? await probeDuration(srcPath) : 5);
+    await makeSegment(clip, i, srcPath, segPath, dur);
     segmentFiles.push(segPath);
     // Always use the measured duration of the finished segment so transition offsets are exact
     const segDur = await probeDuration(segPath);
     segDurations.push(segDur);
     console.log('Segment ' + (i + 1) + '/' + clips.length + ' done (' + segDur.toFixed(2) + 's)');
+  }
+
+  // If the picture is shorter than the voice (+ ending tail), lengthen the last clip with moving footage:
+  // the voice is never cut and the picture never freezes.
+  if (narrLen > 0 && clips.length > 0) {
+    const target = narrLen + (endCfg ? endTail : 0);
+    const total = segDurations.reduce((x, y) => x + y, 0) - (useTransitions ? (clips.length - 1) * transDur : 0);
+    const li = clips.length - 1;
+    const lastClip = clips[li];
+    if (total < target - 0.05 && !(lastClip.type === 'video' && lastClip.keep_audio)) {
+      const extra = target - total + 0.2;
+      console.log('Lengthening the last clip by ' + extra.toFixed(1) + 's to cover the narration');
+      await makeSegment(lastClip, li, srcPaths[li], segmentFiles[li], segDurations[li] + extra);
+      segDurations[li] = await probeDuration(segmentFiles[li]);
+    }
   }
 
   const concatPath = path.join(workDir, 'concat.mp4');
@@ -268,13 +302,6 @@ async function main() {
   const AF = 'aformat=sample_rates=44100:channel_layouts=stereo';
   console.log('Mixing audio...');
 
-  // Ending settings: any clip with end_fade (true or an object) turns the ending on
-  const endClip = clips.find(c => c && c.end_fade);
-  const endCfg = endClip ? (typeof endClip.end_fade === 'object' ? endClip.end_fade : {}) : null;
-  const endTail = endCfg && endCfg.tail !== undefined ? endCfg.tail : 4;
-  const endVFade = endCfg && endCfg.video_fade ? endCfg.video_fade : 2;
-  const endMFade = endCfg && endCfg.music_fade ? endCfg.music_fade : 3;
-
   if (endCfg && (payload.narration_url || payload.music_url)) {
     let narrPath = null;
     let musicPath = null;
@@ -294,15 +321,16 @@ async function main() {
     });
     console.log('Ending applied, total length ' + T.toFixed(1) + 's');
   } else if (endCfg && !payload.narration_url && !payload.music_url) {
-    // Finished parts (sound already inside): the sound simply ends, the picture holds for the tail, then fades to black
+    // Finished parts (sound already inside): the sound simply ends, the picture keeps moving for the tail, then fades to black
     const V = await probeDuration(videoPath);
     const T = V + endTail;
     finalPath = path.join(workDir, 'final.mp4');
-    const vChain = '[0:v]tpad=stop_mode=clone:stop_duration=' + endTail.toFixed(3) + ',fade=t=out:st=' + Math.max(0, T - endVFade).toFixed(3) + ':d=' + endVFade + '[v]';
+    const startT = Math.max(0, V - endTail);
+    const vChain = '[0:v]split=2[a][b];[b]trim=start=' + startT.toFixed(3) + ',setpts=PTS-STARTPTS,reverse,setpts=PTS-STARTPTS[r];[a][r]concat=n=2:v=1:a=0,fade=t=out:st=' + Math.max(0, T - endVFade).toFixed(3) + ':d=' + endVFade + '[v]';
     const aChain = allHaveAudio ? ';[0:a]apad=whole_dur=' + T.toFixed(3) + '[a]' : '';
     const maps = allHaveAudio ? '-map "[v]" -map "[a]" -c:a aac -b:a 192k' : '-map "[v]"';
     await run('ffmpeg -i "' + videoPath + '" -filter_complex "' + vChain + aChain + '" ' + maps + ' -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -t ' + T.toFixed(3) + ' "' + finalPath + '" -y');
-    console.log('Ending applied (voice ends, picture holds ' + endTail + 's then fades), total length ' + T.toFixed(1) + 's');
+    console.log('Ending applied (voice ends, picture keeps moving ' + endTail + 's then fades), total length ' + T.toFixed(1) + 's');
   } else if (payload.narration_url && payload.music_url) {
     const narrPath = path.join(workDir, 'narration.mp3');
     const musicPath = path.join(workDir, 'music.mp3');
