@@ -1,0 +1,36 @@
+name: Publish YouTube
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload_b64:
+        description: 'base64 JSON payload'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Upload to YouTube
+        env:
+          PAYLOAD_B64: ${{ github.event.inputs.payload_b64 }}
+          YT_OAUTH_B64: ${{ secrets.YT_OAUTH_B64 }}
+          GDRIVE_OAUTH_B64: ${{ secrets.GDRIVE_OAUTH_B64 }}
+        run: node upload-youtube.cjs
+      - name: Commit result JSON
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add results/ || true
+          git commit -m "youtube result ${{ github.run_id }}" || echo "nothing to commit"
+          git pull --rebase origin main || true
+          git push || true
