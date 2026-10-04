@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "error": "Chunk upload failed at offset 201326592: HTTP 403 {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"The user's Drive storage quota has been exceeded.\",\n    \"errors\": [\n      {\n        \"message\": \"The user's Drive storage quota has been exceeded.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+}
