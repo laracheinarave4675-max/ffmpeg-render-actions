@@ -1,0 +1,72 @@
+name: Thumbnail
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: file name (letters, digits, dash)
+        required: true
+        default: thumb
+      prompt:
+        description: FLUX prompt (English)
+        required: true
+      tag:
+        description: small gold line above the text
+        required: false
+      line1:
+        description: big text line 1
+        required: true
+      line2:
+        description: big text line 2
+        required: false
+      line3:
+        description: big text line 3 (gold, arrow starts here)
+        required: false
+      core_x:
+        description: focal point x from 0 to 1
+        required: false
+        default: '0.75'
+      core_y:
+        description: focal point y from 0 to 1
+        required: false
+        default: '0.45'
+permissions:
+  contents: write
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          pip install pillow numpy
+      - name: Make thumbnail
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          PROMPT: ${{ inputs.prompt }}
+          TAG: ${{ inputs.tag }}
+          L1: ${{ inputs.line1 }}
+          L2: ${{ inputs.line2 }}
+          L3: ${{ inputs.line3 }}
+          CORE_X: ${{ inputs.core_x }}
+          CORE_Y: ${{ inputs.core_y }}
+        run: python3 thumb_make.py
+      - name: Save
+        env:
+          NAME: ${{ inputs.name }}
+        run: |
+          N=$(echo "$NAME" | tr -cd 'A-Za-z0-9_-')
+          mkdir -p thumbs
+          cp out.jpg "thumbs/$N.jpg"
+          cp raw.jpg "thumbs/$N-raw.jpg"
+          git config user.name "thumb-bot"
+          git config user.email "thumb-bot@users.noreply.github.com"
+          git add thumbs
+          git commit -m "thumbnail $N"
+          git pull --rebase
+          git push
