@@ -21,6 +21,12 @@ async function probeDuration(file) {
 
 // Ending: voice finishes first, music fades out, then the picture fades to black at the very end.
 // Used only when a clip in the payload carries "end_fade" (true or {tail, music_fade, video_fade}).
+// Director layer: sidechain ducking parameters (music_duck: true or an object)
+function duckParams(d) {
+  const dk = d && typeof d === 'object' ? d : {};
+  return 'threshold=' + (dk.threshold || 0.02) + ':ratio=' + (dk.ratio || 8) + ':attack=' + (dk.attack || 40) + ':release=' + (dk.release || 700) + ':makeup=1';
+}
+
 async function mixWithEnding(o) {
   const V = await probeDuration(o.videoPath);
   const N = o.narrPath ? await probeDuration(o.narrPath) : 0;
@@ -45,6 +51,12 @@ async function mixWithEnding(o) {
     chains.push('[' + idx + ':a]volume=' + o.musicVol + ',' + AFc + ',atrim=0:' + T.toFixed(3) + ',afade=t=out:st=' + fadeSt.toFixed(3) + ':d=' + o.mFade + '[music]');
     labels.push('[music]');
     idx++;
+  }
+  if (o.duck && o.narrPath && o.musicPath) {
+    chains.push('[na]asplit=2[nam][nak]');
+    chains.push('[music][nak]sidechaincompress=' + duckParams(o.duck) + '[musicd]');
+    labels[0] = '[nam]';
+    labels[1] = '[musicd]';
   }
   chains.push(labels.length === 2
     ? labels.join('') + 'amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[aout]'
@@ -156,6 +168,11 @@ async function main() {
   const payload = JSON.parse(Buffer.from(process.env.PAYLOAD_B64, 'base64').toString('utf8'));
   const oauthCreds = JSON.parse(Buffer.from(process.env.GDRIVE_OAUTH_B64, 'base64').toString('utf8'));
   const clips = payload.clips || [];
+// Director layer: optional music ducking (sidechain). Enabled by payload.music_duck or clips[].direction.audio.music_duck
+const duckCfg = payload.music_duck || (function () {
+  const c = clips.find(function (x) { return x && x.direction && x.direction.audio && x.direction.audio.music_duck; });
+  return c ? c.direction.audio.music_duck : null;
+})();
   const workDir = path.join(process.cwd(), 'work');
   fs.mkdirSync(workDir, { recursive: true });
   const RES = '1920:1080';
@@ -340,6 +357,7 @@ function pairSum() {
     const T = await mixWithEnding({
       videoPath, narrPath, musicPath,
       musicVol: payload.music_volume || (narrPath ? 0.15 : 0.3),
+        duck: duckCfg,
       outPath: finalPath, tail: endTail, vFade: endVFade, mFade: endMFade
     });
     console.log('Ending applied, total length ' + T.toFixed(1) + 's');
@@ -361,7 +379,9 @@ function pairSum() {
     await downloadFile(payload.music_url, musicPath);
     finalPath = path.join(workDir, 'final.mp4');
     const musicVol = payload.music_volume || 0.15;
-    const filter = '[1:a]' + AF + '[na];[2:a]volume=' + musicVol + ',' + AF + '[music];[na][music]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]';
+    const filter = duckCfg
+      ? '[1:a]' + AF + '[na0];[na0]asplit=2[na][nak];[2:a]volume=' + musicVol + ',' + AF + '[music];[music][nak]sidechaincompress=' + duckParams(duckCfg) + '[musicd];[na][musicd]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]'
+      : '[1:a]' + AF + '[na];[2:a]volume=' + musicVol + ',' + AF + '[music];[na][music]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]';
     await run('ffmpeg -i "' + videoPath + '" -i "' + narrPath + '" -stream_loop -1 -i "' + musicPath + '" -filter_complex "' + filter + '" -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest "' + finalPath + '" -y');
   } else if (payload.narration_url) {
     const narrPath = path.join(workDir, 'narration.mp3');
