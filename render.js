@@ -163,6 +163,24 @@ async function main() {
   const useTransitions = payload.transitions !== false && clips.length > 1;
   const transDur = payload.transition_duration || 0.8;
   const transType = payload.transition_type || 'fade';
+// Director layer: per-pair transition lookup. Falls back to the global transition.
+const MIN_TRANS = 0.04; // one frame at 25 fps, used for hard cuts
+function pairT(i) {
+  const c = clips[i];
+  const t = c && c.direction && c.direction.transition_in;
+  if (!t) return { type: transType, dur: transDur };
+  let dur = typeof t.duration === 'number' ? t.duration : transDur;
+  let type = t.type || transType;
+  if (type === 'cut' || dur <= 0) { type = 'fade'; dur = MIN_TRANS; }
+  const prev = segDurations[i - 1], cur = segDurations[i];
+  if (prev && cur) dur = Math.min(dur, 0.45 * prev, 0.45 * cur);
+  return { type: type, dur: Math.max(dur, MIN_TRANS) };
+}
+function pairSum() {
+  let s = 0;
+  for (let i = 1; i < clips.length; i++) s += pairT(i).dur;
+  return s;
+}
   const segmentFiles = [];
   const segDurations = [];
   const srcPaths = [];
@@ -227,7 +245,7 @@ async function main() {
   // the voice is never cut and the picture never freezes.
   if (narrLen > 0 && clips.length > 0) {
     const target = narrLen + (endCfg ? endTail : 0);
-    const total = segDurations.reduce((x, y) => x + y, 0) - (useTransitions ? (clips.length - 1) * transDur : 0);
+    const total = segDurations.reduce((x, y) => x + y, 0) - (useTransitions ? pairSum() : 0);
     const li = clips.length - 1;
     const lastClip = clips[li];
     if (total < target - 0.05 && !(lastClip.type === 'video' && lastClip.keep_audio)) {
@@ -249,10 +267,10 @@ async function main() {
     let prevLabel = '0:v';
     let cum = segDurations[0];
     for (let i = 1; i < segmentFiles.length; i++) {
-      const offset = Math.max(0, cum - transDur);
+      const pt = pairT(i); const offset = Math.max(0, cum - pt.dur);
       const outLabel = i === segmentFiles.length - 1 ? 'vout' : 'v' + i;
-      filterChain += '[' + prevLabel + '][' + i + ':v]xfade=transition=' + transType + ':duration=' + transDur + ':offset=' + offset.toFixed(3) + '[' + outLabel + '];';
-      cum = cum + segDurations[i] - transDur;
+      filterChain += '[' + prevLabel + '][' + i + ':v]xfade=transition=' + pt.type + ':duration=' + pt.dur + ':offset=' + offset.toFixed(3) + '[' + outLabel + '];';
+      cum = cum + segDurations[i] - pt.dur;
       prevLabel = outLabel;
     }
     if (allHaveAudio) {
@@ -260,7 +278,7 @@ async function main() {
       let aPrev = '0:a';
       for (let i = 1; i < segmentFiles.length; i++) {
         const aOut = i === segmentFiles.length - 1 ? 'aout' : 'a' + i;
-        filterChain += '[' + aPrev + '][' + i + ':a]acrossfade=d=' + transDur + ':c1=tri:c2=tri[' + aOut + '];';
+        filterChain += '[' + aPrev + '][' + i + ':a]acrossfade=d=' + pairT(i).dur + ':c1=tri:c2=tri[' + aOut + '];';
         aPrev = aOut;
       }
     }
