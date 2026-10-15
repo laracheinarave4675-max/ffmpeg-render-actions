@@ -57,6 +57,11 @@ function planToPayload(plan) {
       dir.camera = cam;
     }
     if (s.direction && s.direction.transition_in) dir.transition_in = s.direction.transition_in;
+    const au = s.direction && s.direction.audio;
+    if (au && typeof au.music_duck_db === "number" && au.music_duck_db < 0) {
+      // approximate mapping: -14 dB -> ratio 8 (measured about 11 dB drop on the test signal)
+      dir.audio = { music_duck: { ratio: Math.min(20, Math.max(2, Math.round(1 + Math.abs(au.music_duck_db) / 2))) } };
+    }
 
     const clip = { type: a.type, src: a.src, duration: dur };
     if (a.keep_audio) clip.keep_audio = true;
