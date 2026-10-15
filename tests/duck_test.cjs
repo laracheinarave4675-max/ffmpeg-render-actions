@@ -39,7 +39,7 @@ function level(file, ss, t) {
   return x ? parseFloat(x[1]) : null;
 }
 
-const ducked = render("ducked", "[0:a]" + AF + "[na0];[na0]asplit=2[na][nak];[1:a]volume=0.15," + AF + "[music];[music][nak]sidechaincompress=" + P + "[o]");
+const ducked = render("ducked", "[0:a]" + AF + "[na0];[na0]asplit=2[na][nak];[na]anullsink;[1:a]volume=0.15," + AF + "[music];[music][nak]sidechaincompress=" + P + "[o]");
 const plain = render("plain", "[1:a]volume=0.15," + AF + "[o]");
 check("ducked graph renders", ducked.ok, ducked.ok ? "" : ducked.err);
 check("plain graph renders", plain.ok);
