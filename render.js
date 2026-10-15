@@ -401,7 +401,8 @@ function pairSum() {
   // Director layer: post effects (sfx + ILLUSTRATION badges); no-op without payload.sfx / payload.badges
   try {
     const fx = require('./director/post_effects.cjs');
-    const fxPath = await fx.applyPostEffects({ finalPath, sfx: payload.sfx, badges: payload.badges, workDir, downloadFile });
+    const fxFromClips = ((clips.find(function (c) { return c && c.direction && c.direction.fx; }) || {}).direction || {}).fx || {};
+    const fxPath = await fx.applyPostEffects({ finalPath, sfx: payload.sfx || fxFromClips.sfx, badges: payload.badges || fxFromClips.badges, workDir, downloadFile });
     if (fxPath) finalPath = fxPath;
   } catch (e) { console.log('Post effects skipped: ' + e.message); }
 

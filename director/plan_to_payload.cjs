@@ -84,3 +84,16 @@ if (require.main === module) {
   if (res.errors.length) process.exit(1);
   console.log(JSON.stringify(res.payload, null, 2));
 }
+
+// Director layer: derive badges/sfx after conversion (see director/plan_fx.cjs)
+(function () {
+  const orig = module.exports.planToPayload;
+  if (typeof orig !== 'function' || orig.__fxWrapped) return;
+  const wrapped = function (plan) {
+    const res = orig.apply(this, arguments);
+    try { require('./plan_fx.cjs').addFx(plan, res); } catch (e) { console.error('plan_fx skipped: ' + e.message); }
+    return res;
+  };
+  wrapped.__fxWrapped = true;
+  module.exports.planToPayload = wrapped;
+})();
