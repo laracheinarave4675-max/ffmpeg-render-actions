@@ -398,6 +398,13 @@ function pairSum() {
 
   console.log('Render complete: ' + finalPath + ' (' + Math.round(fs.statSync(finalPath).size / 1024 / 1024) + ' MB)');
 
+  // Director layer: post effects (sfx + ILLUSTRATION badges); no-op without payload.sfx / payload.badges
+  try {
+    const fx = require('./director/post_effects.cjs');
+    const fxPath = await fx.applyPostEffects({ finalPath, sfx: payload.sfx, badges: payload.badges, workDir, downloadFile });
+    if (fxPath) finalPath = fxPath;
+  } catch (e) { console.log('Post effects skipped: ' + e.message); }
+
   console.log('Authenticating with Google Drive...');
   const accessToken = await getAccessToken(oauthCreds);
   const folderId = await findOrCreateFolder(accessToken, 'StarVideoProject');
