@@ -21,6 +21,12 @@ async function probeDuration(file) {
 
 // Ending: voice finishes first, music fades out, then the picture fades to black at the very end.
 // Used only when a clip in the payload carries "end_fade" (true or {tail, music_fade, video_fade}).
+// Director layer: sidechain ducking parameters (music_duck: true or an object)
+function duckParams(d) {
+  const dk = d && typeof d === 'object' ? d : {};
+  return 'threshold=' + (dk.threshold || 0.02) + ':ratio=' + (dk.ratio || 8) + ':attack=' + (dk.attack || 40) + ':release=' + (dk.release || 700) + ':makeup=1';
+}
+
 async function mixWithEnding(o) {
   const V = await probeDuration(o.videoPath);
   const N = o.narrPath ? await probeDuration(o.narrPath) : 0;
@@ -45,6 +51,12 @@ async function mixWithEnding(o) {
     chains.push('[' + idx + ':a]volume=' + o.musicVol + ',' + AFc + ',atrim=0:' + T.toFixed(3) + ',afade=t=out:st=' + fadeSt.toFixed(3) + ':d=' + o.mFade + '[music]');
     labels.push('[music]');
     idx++;
+  }
+  if (o.duck && o.narrPath && o.musicPath) {
+    chains.push('[na]asplit=2[nam][nak]');
+    chains.push('[music][nak]sidechaincompress=' + duckParams(o.duck) + '[musicd]');
+    labels[0] = '[nam]';
+    labels[1] = '[musicd]';
   }
   chains.push(labels.length === 2
     ? labels.join('') + 'amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[aout]'
@@ -156,6 +168,11 @@ async function main() {
   const payload = JSON.parse(Buffer.from(process.env.PAYLOAD_B64, 'base64').toString('utf8'));
   const oauthCreds = JSON.parse(Buffer.from(process.env.GDRIVE_OAUTH_B64, 'base64').toString('utf8'));
   const clips = payload.clips || [];
+// Director layer: optional music ducking (sidechain). Enabled by payload.music_duck or clips[].direction.audio.music_duck
+const duckCfg = payload.music_duck || (function () {
+  const c = clips.find(function (x) { return x && x.direction && x.direction.audio && x.direction.audio.music_duck; });
+  return c ? c.direction.audio.music_duck : null;
+})();
   const workDir = path.join(process.cwd(), 'work');
   fs.mkdirSync(workDir, { recursive: true });
   const RES = '1920:1080';
@@ -163,6 +180,24 @@ async function main() {
   const useTransitions = payload.transitions !== false && clips.length > 1;
   const transDur = payload.transition_duration || 0.8;
   const transType = payload.transition_type || 'fade';
+// Director layer: per-pair transition lookup. Falls back to the global transition.
+const MIN_TRANS = 0.04; // one frame at 25 fps, used for hard cuts
+function pairT(i) {
+  const c = clips[i];
+  const t = c && c.direction && c.direction.transition_in;
+  if (!t) return { type: transType, dur: transDur };
+  let dur = typeof t.duration === 'number' ? t.duration : transDur;
+  let type = t.type || transType;
+  if (type === 'cut' || dur <= 0) { type = 'fade'; dur = MIN_TRANS; }
+  const prev = segDurations[i - 1], cur = segDurations[i];
+  if (prev && cur) dur = Math.min(dur, 0.45 * prev, 0.45 * cur);
+  return { type: type, dur: Math.max(dur, MIN_TRANS) };
+}
+function pairSum() {
+  let s = 0;
+  for (let i = 1; i < clips.length; i++) s += pairT(i).dur;
+  return s;
+}
   const segmentFiles = [];
   const segDurations = [];
   const srcPaths = [];
@@ -178,7 +213,12 @@ async function main() {
   async function makeSegment(clip, i, srcPath, segPath, dur) {
     if (clip.type === 'image') {
       const frames = Math.round(dur * 25);
-      if (kenBurns) {
+      const dirCam = clip.direction && clip.direction.camera;
+      const dirZp = dirCam ? require('./director/camera.cjs').buildZoompan(dirCam, { duration: dur, fps: 25, outW: 1920, outH: 1080 }) : null;
+      if (dirZp) {
+        const dirPrefit = require('./director/camera.cjs').prefitFilter(1920, 1080);
+        await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "' + dirPrefit + ',' + dirZp + ',format=yuv420p" -c:v libx264 -t ' + dur + ' -r 25 "' + segPath + '" -y');
+      } else if (dirCam ? false : kenBurns) {
         const zoomDir = i % 2 === 0 ? 'min(zoom+0.0012,1.4)' : 'if(lte(zoom,1.0),1.4,max(1.0,zoom-0.0012))';
         await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,zoompan=z=\'' + zoomDir + '\':d=' + frames + ':s=1920x1080:fps=25,format=yuv420p" -c:v libx264 -t ' + dur + ' -r 25 "' + segPath + '" -y');
       } else {
@@ -222,7 +262,7 @@ async function main() {
   // the voice is never cut and the picture never freezes.
   if (narrLen > 0 && clips.length > 0) {
     const target = narrLen + (endCfg ? endTail : 0);
-    const total = segDurations.reduce((x, y) => x + y, 0) - (useTransitions ? (clips.length - 1) * transDur : 0);
+    const total = segDurations.reduce((x, y) => x + y, 0) - (useTransitions ? pairSum() : 0);
     const li = clips.length - 1;
     const lastClip = clips[li];
     if (total < target - 0.05 && !(lastClip.type === 'video' && lastClip.keep_audio)) {
@@ -244,10 +284,10 @@ async function main() {
     let prevLabel = '0:v';
     let cum = segDurations[0];
     for (let i = 1; i < segmentFiles.length; i++) {
-      const offset = Math.max(0, cum - transDur);
+      const pt = pairT(i); const offset = Math.max(0, cum - pt.dur);
       const outLabel = i === segmentFiles.length - 1 ? 'vout' : 'v' + i;
-      filterChain += '[' + prevLabel + '][' + i + ':v]xfade=transition=' + transType + ':duration=' + transDur + ':offset=' + offset.toFixed(3) + '[' + outLabel + '];';
-      cum = cum + segDurations[i] - transDur;
+      filterChain += '[' + prevLabel + '][' + i + ':v]xfade=transition=' + pt.type + ':duration=' + pt.dur + ':offset=' + offset.toFixed(3) + '[' + outLabel + '];';
+      cum = cum + segDurations[i] - pt.dur;
       prevLabel = outLabel;
     }
     if (allHaveAudio) {
@@ -255,7 +295,7 @@ async function main() {
       let aPrev = '0:a';
       for (let i = 1; i < segmentFiles.length; i++) {
         const aOut = i === segmentFiles.length - 1 ? 'aout' : 'a' + i;
-        filterChain += '[' + aPrev + '][' + i + ':a]acrossfade=d=' + transDur + ':c1=tri:c2=tri[' + aOut + '];';
+        filterChain += '[' + aPrev + '][' + i + ':a]acrossfade=d=' + pairT(i).dur + ':c1=tri:c2=tri[' + aOut + '];';
         aPrev = aOut;
       }
     }
@@ -317,6 +357,7 @@ async function main() {
     const T = await mixWithEnding({
       videoPath, narrPath, musicPath,
       musicVol: payload.music_volume || (narrPath ? 0.15 : 0.3),
+        duck: duckCfg,
       outPath: finalPath, tail: endTail, vFade: endVFade, mFade: endMFade
     });
     console.log('Ending applied, total length ' + T.toFixed(1) + 's');
@@ -338,7 +379,9 @@ async function main() {
     await downloadFile(payload.music_url, musicPath);
     finalPath = path.join(workDir, 'final.mp4');
     const musicVol = payload.music_volume || 0.15;
-    const filter = '[1:a]' + AF + '[na];[2:a]volume=' + musicVol + ',' + AF + '[music];[na][music]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]';
+    const filter = duckCfg
+      ? '[1:a]' + AF + '[na0];[na0]asplit=2[na][nak];[2:a]volume=' + musicVol + ',' + AF + '[music];[music][nak]sidechaincompress=' + duckParams(duckCfg) + '[musicd];[na][musicd]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]'
+      : '[1:a]' + AF + '[na];[2:a]volume=' + musicVol + ',' + AF + '[music];[na][music]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]';
     await run('ffmpeg -i "' + videoPath + '" -i "' + narrPath + '" -stream_loop -1 -i "' + musicPath + '" -filter_complex "' + filter + '" -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest "' + finalPath + '" -y');
   } else if (payload.narration_url) {
     const narrPath = path.join(workDir, 'narration.mp3');
