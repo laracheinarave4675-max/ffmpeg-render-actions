@@ -216,7 +216,7 @@ function pairSum() {
       const dirCam = clip.direction && clip.direction.camera;
       const dirZp = dirCam ? require('./director/camera.cjs').buildZoompan(dirCam, { duration: dur, fps: 25, outW: 1920, outH: 1080 }) : null;
       if (dirZp) {
-        const dirPrefit = require('./director/camera.cjs').prefitFilter(1920, 1080);
+        const dirPrefit = (dirCam.mode === 'pan') ? 'null' : require('./director/camera.cjs').prefitFilter(1920, 1080);
         await run('ffmpeg -loop 1 -i "' + srcPath + '" -vf "' + dirPrefit + ',' + dirZp + ',format=yuv420p" -c:v libx264 -t ' + dur + ' -r 25 "' + segPath + '" -y');
       } else if (dirCam ? false : kenBurns) {
         const zoomDir = i % 2 === 0 ? 'min(zoom+0.0012,1.4)' : 'if(lte(zoom,1.0),1.4,max(1.0,zoom-0.0012))';

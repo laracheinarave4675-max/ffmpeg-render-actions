@@ -54,6 +54,7 @@ function prefitFilter(outW, outH) {
 // opts: { duration (sec), fps, outW, outH }
 function buildZoompan(cam, opts) {
   if (!cam || cam.mode === "static") return null;
+  if (cam.mode === "pan") return buildPanCrop(cam, opts);
   const fps = opts.fps || 30;
   const W = opts.outW || 1920, H = opts.outH || 1080;
   const dur = opts.duration;
@@ -75,3 +76,27 @@ function buildZoompan(cam, opts) {
 }
 
 module.exports = { resolveZoom, easeValue, prefitFilter, buildZoompan };
+
+// Smooth pan over the FULL image (no center pre-crop).
+// Input arrives as a looped stream (-loop 1 -t dur), so NO loop/trim filter here.
+// focus / pan_to are fractions (0..1) of the available travel range.
+function buildPanCrop(cam, opts) {
+  const fps = opts.fps || 30;
+  const W = opts.outW || 1920, H = opts.outH || 1080;
+  const W2 = W * 2, H2 = H * 2;
+  const SW = Math.round(W2 * 1.15 / 2) * 2, SH = Math.round(H2 * 1.15 / 2) * 2;
+  const dur = opts.duration;
+  const st = num(cam.start_at, 0);
+  const en = num(cam.end_at, dur);
+  const span = Math.max(en - st, 0.001);
+  const t = "clip((n/" + fps + "-" + st + ")/" + span + ",0,1)";
+  const E = easeExpr(cam.easing || "ease_in_out", t);
+  const f = cam.focus || { x: 0.5, y: 0.5 };
+  const pt = cam.pan_to || f;
+  const fx = "(" + f.x + "+(" + pt.x + "-" + f.x + ")*" + E + ")";
+  const fy = "(" + f.y + "+(" + pt.y + "-" + f.y + ")*" + E + ")";
+  return "scale=" + SW + ":" + SH + ":force_original_aspect_ratio=increase" +
+    ",fps=" + fps +
+    ",crop=" + W2 + ":" + H2 + ":x='(iw-" + W2 + ")*" + fx + "':y='(ih-" + H2 + ")*" + fy + "'" +
+    ",scale=" + W + ":" + H;
+}
