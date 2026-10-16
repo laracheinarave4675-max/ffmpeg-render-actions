@@ -351,7 +351,7 @@ function pairSum() {
     }
     if (payload.music_url) {
       musicPath = path.join(workDir, 'music.mp3');
-      await downloadFile(payload.music_url, musicPath);
+      await require('./director/music_bed.cjs').fetchOrCopy(downloadFile, payload.music_url, musicPath, { clips: (typeof clips !== 'undefined' ? clips : []), workDir });
     }
     finalPath = path.join(workDir, 'final.mp4');
     const T = await mixWithEnding({
@@ -376,7 +376,7 @@ function pairSum() {
     const narrPath = path.join(workDir, 'narration.mp3');
     const musicPath = path.join(workDir, 'music.mp3');
     await downloadFile(payload.narration_url, narrPath);
-    await downloadFile(payload.music_url, musicPath);
+    await require('./director/music_bed.cjs').fetchOrCopy(downloadFile, payload.music_url, musicPath, { clips: (typeof clips !== 'undefined' ? clips : []), workDir });
     finalPath = path.join(workDir, 'final.mp4');
     const musicVol = payload.music_volume || 0.15;
     const filter = duckCfg
@@ -390,7 +390,7 @@ function pairSum() {
     await run('ffmpeg -i "' + videoPath + '" -i "' + narrPath + '" -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest "' + finalPath + '" -y');
   } else if (payload.music_url) {
     const musicPath = path.join(workDir, 'music.mp3');
-    await downloadFile(payload.music_url, musicPath);
+    await require('./director/music_bed.cjs').fetchOrCopy(downloadFile, payload.music_url, musicPath, { clips: (typeof clips !== 'undefined' ? clips : []), workDir });
     finalPath = path.join(workDir, 'final.mp4');
     const musicVol = payload.music_volume || 0.3;
     await run('ffmpeg -i "' + videoPath + '" -stream_loop -1 -i "' + musicPath + '" -filter_complex "[1:a]volume=' + musicVol + ',' + AF + '[aout]" -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest "' + finalPath + '" -y');
