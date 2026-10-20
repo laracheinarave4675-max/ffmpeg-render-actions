@@ -16,7 +16,7 @@ const FPS = 25;
 const scenes = [
   {
     title: "A WORLD HIDDEN BENEATH THE HAZE",
-    image: "https://photojournal.jpl.nasa.gov/jpeg/PIA06983.jpg",
+    image: "https://d2pn8kiwq2w21t.cloudfront.net/original_images/jpegPIA07230.jpg",
     narration:
       "Imagine landing on a world where rivers may flow, rain may fall, and the ground is made of frozen water and organic material. This is Titan, Saturn's largest moon, a place that looks strangely familiar, yet is unlike anywhere on Earth."
   },
