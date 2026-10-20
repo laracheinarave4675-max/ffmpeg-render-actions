@@ -1,6 +1,9 @@
 name: blender-feasibility
 on:
   workflow_dispatch:
+  push:
+    branches: ["feature/finishing-layer"]
+    paths: ["scenes/**", ".github/workflows/blender-feasibility.yml"]
 
 jobs:
   test:
