@@ -1,0 +1,40 @@
+name: Test Documentary Renderer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Check JavaScript syntax
+        run: node --check render-test.js
+
+      - name: Check FFmpeg installation
+        run: |
+          ffmpeg -version
+          ffprobe -version
+
+      - name: Confirm renderer file exists
+        run: |
+          test -f render-test.js
+          echo "Renderer test file exists."
+          echo "Syntax and FFmpeg checks completed successfully."
