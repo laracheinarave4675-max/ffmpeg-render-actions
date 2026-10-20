@@ -1,0 +1,56 @@
+name: huygens-v2
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/finishing-layer"]
+    paths: ["scenes/huygens_v2.py", ".github/workflows/huygens-v2.yml"]
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+      - name: Render 12 frames of the shot
+        run: |
+          START=$(( 1 + ${{ matrix.chunk }} * 12 ))
+          END=$(( START + 11 ))
+          mkdir -p /tmp/frames
+          T0=$(date +%s)
+          blender -b -P scenes/huygens_v2.py -- --start $START --end $END --out /tmp/frames --quality draft
+          T1=$(date +%s)
+          echo "chunk ${{ matrix.chunk }}: frames $START-$END, $((T1-T0)) s, $(ls /tmp/frames | wc -l) files, nproc=$(nproc)" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-frames-${{ matrix.chunk }}
+          path: /tmp/frames/*.png
+
+  assemble:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v2-frames-*
+          merge-multiple: true
+          path: /tmp/frames
+      - name: Encode (temporal denoise, 12 to 24 fps, vignette)
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          echo "frames: $(ls /tmp/frames | wc -l)" | tee -a "$GITHUB_STEP_SUMMARY"
+          ffmpeg -y -framerate 12 -start_number 1 -i /tmp/frames/f_%04d.png \
+            -vf "hqdn3d=3:3:8:8,framerate=fps=24:interp_start=0:interp_end=255:scene=100,vignette=PI/6,format=yuv420p" \
+            -c:v libx264 -crf 17 -preset medium /tmp/huygens_v2.mp4
+          ls -la /tmp/huygens_v2.mp4 | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: huygens_v2
+          path: /tmp/huygens_v2.mp4
