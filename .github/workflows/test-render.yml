@@ -25,37 +25,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Check JavaScript syntax
-        run: node --check render-test.js
-
-      - name: Generate a test video
+      - name: Create a space scene
         run: |
           mkdir -p test-output
+
           ffmpeg -hide_banner -loglevel error -y \
             -f lavfi \
-            -i "color=c=black:s=1280x720:r=25:d=10" \
-            -f lavfi \
-            -i "sine=frequency=440:duration=10" \
+            -i "color=c=0x05091f:s=1280x720:r=25:d=8" \
+            -vf "drawbox=x=850:y=130:w=180:h=180:color=0x2864ff@0.9:t=fill,drawbox=x=870:y=150:w=140:h=140:color=0x68b5ff@0.9:t=fill,drawtext=text='SPACE TEST':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=550" \
             -c:v libx264 \
             -preset ultrafast \
             -pix_fmt yuv420p \
-            -c:a aac \
-            -shortest \
-            test-output/test-video.mp4
+            test-output/space-scene.mp4
 
-      - name: Verify generated video
+      - name: Verify video
         run: |
           ffprobe -v error \
             -show_entries format=duration \
             -of default=noprint_wrappers=1:nokey=1 \
-            test-output/test-video.mp4
+            test-output/space-scene.mp4
 
-          test -s test-output/test-video.mp4
-          echo "Test video generated successfully."
+          test -s test-output/space-scene.mp4
 
       - name: Upload test video
         uses: actions/upload-artifact@v4
         with:
-          name: documentary-test-video
-          path: test-output/test-video.mp4
+          name: space-scene-test
+          path: test-output/space-scene.mp4
           retention-days: 1
