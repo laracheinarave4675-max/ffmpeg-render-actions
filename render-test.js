@@ -18,7 +18,7 @@ const NASA_IMAGES = [
     duration: 16
   },
   {
-    url: 'https://science.nasa.gov/wp-content/uploads/2023/04/titans-surface-pia06438.jpg',
+    url: 'https://d2pn8kiwq2w21t.cloudfront.net/original_images/jpegPIA07230.jpg',
     title: 'A LANDSCAPE NEVER SEEN BEFORE',
     duration: 16
   },
