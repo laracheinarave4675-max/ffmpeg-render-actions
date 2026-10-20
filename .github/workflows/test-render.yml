@@ -1,4 +1,4 @@
-name: Test Documentary Renderer
+name: Huygens Documentary Pilot
 
 on:
   workflow_dispatch:
@@ -7,9 +7,9 @@ permissions:
   contents: read
 
 jobs:
-  test-render:
+  documentary-pilot:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -20,36 +20,23 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and English TTS
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
 
-      - name: Create a space scene
-        run: |
-          mkdir -p test-output
+      - name: Check JavaScript syntax
+        run: node --check render-test.js
 
-          ffmpeg -hide_banner -loglevel error -y \
-            -f lavfi \
-            -i "color=c=0x05091f:s=1280x720:r=25:d=8" \
-            -vf "drawbox=x=850:y=130:w=180:h=180:color=0x2864ff@0.9:t=fill,drawbox=x=870:y=150:w=140:h=140:color=0x68b5ff@0.9:t=fill,drawtext=text='SPACE TEST':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=550" \
-            -c:v libx264 \
-            -preset ultrafast \
-            -pix_fmt yuv420p \
-            test-output/space-scene.mp4
+      - name: Render Huygens documentary pilot
+        run: node render-test.js
 
-      - name: Verify video
-        run: |
-          ffprobe -v error \
-            -show_entries format=duration \
-            -of default=noprint_wrappers=1:nokey=1 \
-            test-output/space-scene.mp4
-
-          test -s test-output/space-scene.mp4
-
-      - name: Upload test video
+      - name: Upload finished documentary
         uses: actions/upload-artifact@v4
         with:
-          name: space-scene-test
-          path: test-output/space-scene.mp4
-          retention-days: 1
+          name: huygens-titan-documentary-pilot
+          path: |
+            documentary-output/huygens-titan-pilot.mp4
+            documentary-output/credits.txt
+            documentary-output/assets/narration.txt
+          retention-days: 3
