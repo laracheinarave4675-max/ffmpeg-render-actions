@@ -1,42 +1,5 @@
-name: Huygens Documentary Pilot
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  documentary-pilot:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install FFmpeg and English TTS
+      - name: Install FFmpeg and neural TTS
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg espeak-ng
-
-      - name: Check JavaScript syntax
-        run: node --check render-test.js
-
-      - name: Render Huygens documentary pilot
-        run: node render-test.js
-
-      - name: Upload finished documentary
-        uses: actions/upload-artifact@v4
-        with:
-          name: huygens-titan-documentary-pilot
-          path: |
-            documentary-output/huygens-titan-pilot.mp4
-            documentary-output/credits.txt
-            documentary-output/assets/narration.txt
-          retention-days: 3
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade edge-tts
