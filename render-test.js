@@ -1,14 +1,7 @@
 'use strict';
 
-/**
- * Documentary Render Test
- * Node.js 20 + FFmpeg + FFprobe
- * This test file does not replace render.js.
- */
-
 const fs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 
@@ -18,302 +11,279 @@ const WIDTH = 1920;
 const HEIGHT = 1080;
 const FPS = 25;
 
-function log(message) {
-  console.log(`[render-test] ${message}`);
-}
-
-function validatePayload() {
-  const encoded = process.env.PAYLOAD_B64;
-
-  if (!encoded) {
-    throw new Error('PAYLOAD_B64 environment variable is missing.');
+const NASA_IMAGES = [
+  {
+    url: 'https://d2pn8kiwq2w21t.cloudfront.net/original_images/jpegPIA07230.jpg',
+    title: 'AN ALIEN WORLD',
+    duration: 16
+  },
+  {
+    url: 'https://science.nasa.gov/wp-content/uploads/2023/04/titans-surface-pia06438.jpg',
+    title: 'A LANDSCAPE NEVER SEEN BEFORE',
+    duration: 16
+  },
+  {
+    url: 'https://d2pn8kiwq2w21t.cloudfront.net/original_images/jpegPIA07230.jpg',
+    title: 'THE FINAL DESCENT',
+    duration: 16
+  },
+  {
+    url: 'https://d2pn8kiwq2w21t.cloudfront.net/original_images/jpegPIA07230.jpg',
+    title: 'HUYGENS ON TITAN',
+    duration: 16
   }
+];
 
-  let payload;
+const NARRATION = [
+  {
+    text: 'Imagine descending through the thick orange atmosphere of a world almost one and a half billion kilometers from the Sun.',
+    title: 'A WORLD HIDDEN BENEATH THE HAZE'
+  },
+  {
+    text: 'On January fourteenth, two thousand five, the European Space Agency’s Huygens probe reached the surface of Saturn’s largest moon, Titan.',
+    title: 'JANUARY 14, 2005'
+  },
+  {
+    text: 'As it descended, its cameras recorded landscapes shaped by processes unlike those on Earth. Dark channels crossed brighter terrain, hinting at a world where methane may fall as rain.',
+    title: 'RIVERS OF ANOTHER KIND'
+  },
+  {
+    text: 'These were not imagined alien landscapes. They were observations returned by a robotic explorer, sent across the Solar System to reveal a place humanity had never seen from the ground.',
+    title: 'A NEW WORLD REVEALED'
+  }
+];
 
+async function run(command, args, timeout = 180000) {
   try {
-    payload = JSON.parse(
-      Buffer.from(encoded, 'base64').toString('utf8')
-    );
-  } catch {
-    throw new Error('PAYLOAD_B64 must contain valid Base64-encoded JSON.');
-  }
-
-  if (!payload || !Array.isArray(payload.clips)) {
-    throw new Error('Payload must contain a clips array.');
-  }
-
-  if (payload.clips.length === 0) {
-    throw new Error('The clips array is empty.');
-  }
-
-  for (let i = 0; i < payload.clips.length; i++) {
-    const clip = payload.clips[i];
-
-    if (!clip || typeof clip !== 'object') {
-      throw new Error(`Clip ${i + 1} is invalid.`);
-    }
-
-    const url =
-      clip.url ||
-      clip.src ||
-      clip.video_url ||
-      clip.image_url ||
-      clip.download_url ||
-      clip.asset_url;
-
-    if (typeof url !== 'string' || !url.trim()) {
-      throw new Error(`Clip ${i + 1} has no supported URL.`);
-    }
-
-    const duration = Number(
-      clip.duration ?? clip.seconds ?? clip.length ?? 5
-    );
-
-    if (!Number.isFinite(duration) || duration <= 0 || duration > 3600) {
-      throw new Error(`Clip ${i + 1} has an invalid duration.`);
-    }
-  }
-
-  return payload;
-}
-
-async function execute(command, args, timeout = 60000) {
-  try {
-    const result = await execFileAsync(command, args, {
+    return await execFileAsync(command, args, {
       timeout,
-      maxBuffer: 20 * 1024 * 1024,
-      windowsHide: true
+      maxBuffer: 20 * 1024 * 1024
     });
-
-    return result.stdout || '';
   } catch (error) {
-    const details = String(error.stderr || error.message).slice(-4000);
-    throw new Error(`${command} failed: ${details}`);
+    throw new Error(
+      `${command} failed: ${String(error.stderr || error.message).slice(-4000)}`
+    );
   }
 }
 
-async function checkTools() {
-  await execute('ffmpeg', ['-version']);
-  await execute('ffprobe', ['-version']);
-  log('FFmpeg and FFprobe are available.');
-}
-
-function getUrl(clip) {
-  return (
-    clip.url ||
-    clip.src ||
-    clip.video_url ||
-    clip.image_url ||
-    clip.download_url ||
-    clip.asset_url
-  );
-}
-
-function getType(clip, url) {
-  const type = String(clip.type || '').toLowerCase();
-
-  if (['image', 'photo', 'still'].includes(type)) {
-    return 'image';
-  }
-
-  if (['video', 'footage'].includes(type)) {
-    return 'video';
-  }
-
-  try {
-    const ext = path.extname(new URL(url).pathname).toLowerCase();
-
-    if (['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tif', '.tiff'].includes(ext)) {
-      return 'image';
-    }
-  } catch {
-    // Fall back to video when the URL does not reveal its file extension.
-  }
-
-  return 'video';
-}
-
-async function downloadAsset(url, destination) {
+async function download(url, destination) {
   const response = await fetch(url, {
-    redirect: 'follow',
-    signal: AbortSignal.timeout(120000)
+    signal: AbortSignal.timeout(90000),
+    headers: {
+      'User-Agent': 'DocumentaryRenderTest/1.0'
+    }
   });
 
   if (!response.ok) {
-    throw new Error(`Download failed with HTTP ${response.status}: ${url}`);
+    throw new Error(`Image download failed: HTTP ${response.status} (${url})`);
   }
 
-  const contentType = String(
-    response.headers.get('content-type') || ''
-  ).toLowerCase();
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
 
-  if (contentType.includes('text/html')) {
-    throw new Error(
-      `The URL returned an HTML page instead of a media file: ${url}`
-    );
-  }
-
-  if (!response.body) {
-    throw new Error(`The download has no response body: ${url}`);
+  if (!contentType.startsWith('image/')) {
+    throw new Error(`URL did not return an image: ${url}`);
   }
 
   const bytes = Buffer.from(await response.arrayBuffer());
 
-  if (bytes.length === 0) {
-    throw new Error(`The downloaded file is empty: ${url}`);
-  }
-
-  if (bytes.length > 2 * 1024 * 1024 * 1024) {
-    throw new Error('The downloaded file exceeds the 2 GB test limit.');
+  if (bytes.length < 1000) {
+    throw new Error(`Downloaded image is unexpectedly small: ${url}`);
   }
 
   fs.writeFileSync(destination, bytes);
-  return destination;
-}
-
-async function getDuration(file) {
-  const output = await execute('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-of', 'default=noprint_wrappers=1:nokey=1',
-    file
-  ]);
-
-  const duration = Number(output.trim());
-
-  if (!Number.isFinite(duration) || duration <= 0) {
-    throw new Error(`Could not read media duration: ${file}`);
-  }
-
-  return duration;
-}
-
-async function renderClip(clip, index, workDir) {
-  const url = getUrl(clip);
-  const type = getType(clip, url);
-
-  const input = path.join(
-    workDir,
-    `input_${String(index + 1).padStart(3, '0')}${type === 'image' ? '.img' : '.media'}`
-  );
-
-  const output = path.join(
-    workDir,
-    `segment_${String(index + 1).padStart(3, '0')}.mp4`
-  );
-
-  const requestedDuration = Number(
-    clip.duration ?? clip.seconds ?? clip.length ?? 5
-  );
-
-  await downloadAsset(url, input);
-
-  const duration = type === 'image'
-    ? requestedDuration
-    : Math.min(requestedDuration, await getDuration(input));
-
-  const filters = [
-    `scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease`,
-    `pad=${WIDTH}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black`,
-    'setsar=1',
-    `fps=${FPS}`,
-    'format=yuv420p'
-  ].join(',');
-
-  const args = ['-hide_banner', '-loglevel', 'error', '-y'];
-
-  if (type === 'image') {
-    args.push('-loop', '1', '-framerate', String(FPS), '-i', input);
-  } else {
-    args.push('-i', input);
-  }
-
-  args.push(
-    '-t', duration.toFixed(3),
-    '-vf', filters,
-    '-an',
-    '-c:v', 'libx264',
-    '-preset', 'ultrafast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
-    '-r', String(FPS),
-    '-movflags', '+faststart',
-    output
-  );
-
-  await execute('ffmpeg', args, 10 * 60 * 1000);
-
-  const renderedDuration = await getDuration(output);
-
-  log(
-    `Clip ${index + 1}/${' ' + index + 1}: ` +
-    `${type}, ${renderedDuration.toFixed(2)} seconds`
-  );
-
-  return output;
 }
 
 async function main() {
-  const workDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'documentary-render-test-')
+  const outDir = path.join(process.cwd(), 'documentary-output');
+  const assetsDir = path.join(outDir, 'assets');
+
+  fs.mkdirSync(assetsDir, { recursive: true });
+
+  const narrationText = NARRATION.map(item => item.text).join('\n\n');
+
+  fs.writeFileSync(
+    path.join(assetsDir, 'narration.txt'),
+    narrationText,
+    'utf8'
   );
 
-  try {
-    await checkTools();
+  console.log('Downloading original Titan imagery...');
 
-    const payload = validatePayload();
+  const imagePaths = [];
 
-    log(`Validated ${payload.clips.length} clips.`);
+  for (let i = 0; i < NASA_IMAGES.length; i++) {
+    const destination = path.join(assetsDir, `image-${i + 1}.jpg`);
 
-    const renderedSegments = [];
+    await download(NASA_IMAGES[i].url, destination);
+    imagePaths.push(destination);
 
-    for (let i = 0; i < payload.clips.length; i++) {
-      log(`Processing clip ${i + 1} of ${payload.clips.length}.`);
+    console.log(`Downloaded image ${i + 1}/${NASA_IMAGES.length}`);
+  }
 
-      renderedSegments.push(
-        await renderClip(payload.clips[i], i, workDir)
-      );
-    }
+  console.log('Generating English narration...');
 
-    const listFile = path.join(workDir, 'concat.txt');
+  await run('espeak-ng', [
+    '-v', 'en-us',
+    '-s', '138',
+    '-p', '43',
+    '-a', '155',
+    '-w', path.join(assetsDir, 'narration.wav'),
+    narrationText
+  ]);
 
-    const listContents = renderedSegments
-      .map(file => `file '${file.replace(/'/g, "'\\''")}'`)
-      .join('\n');
+  const narrationPath = path.join(assetsDir, 'narration.wav');
 
-    fs.writeFileSync(listFile, `${listContents}\n`, 'utf8');
+  const { stdout } = await run('ffprobe', [
+    '-v', 'error',
+    '-show_entries', 'format=duration',
+    '-of', 'default=noprint_wrappers=1:nokey=1',
+    narrationPath
+  ]);
 
-    const outputFile = path.join(workDir, 'render-test.mp4');
+  const narrationDuration = Number(stdout.trim());
 
-    await execute('ffmpeg', [
+  if (!Number.isFinite(narrationDuration) || narrationDuration <= 0) {
+    throw new Error('Could not determine narration duration.');
+  }
+
+  console.log(`Narration duration: ${narrationDuration.toFixed(1)} seconds`);
+
+  const segmentDuration = narrationDuration / imagePaths.length;
+  const segmentPaths = [];
+
+  for (let i = 0; i < imagePaths.length; i++) {
+    const output = path.join(assetsDir, `scene-${i + 1}.mp4`);
+
+    const title = NASA_IMAGES[i].title.replace(/'/g, '');
+
+    const startZoom = i % 2 === 0 ? 1.0 : 1.12;
+    const endZoom = i % 2 === 0 ? 1.12 : 1.0;
+
+    const frames = Math.ceil(segmentDuration * FPS);
+
+    const zoomFilter =
+      `scale=2200:1238:force_original_aspect_ratio=increase,` +
+      `crop=1920:1080,` +
+      `zoompan=z='${startZoom}+(${endZoom - startZoom})*on/${frames}':` +
+      `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+      `d=${frames}:s=1920x1080:fps=${FPS},` +
+      `drawbox=x=0:y=0:w=iw:h=150:color=black@0.42:t=fill,` +
+      `drawtext=text='${title}':fontcolor=white:fontsize=42:` +
+      `x=90:y=55:borderw=2:bordercolor=black@0.6,` +
+      `fade=t=in:st=0:d=0.7,` +
+      `fade=t=out:st=${Math.max(0, segmentDuration - 0.7)}:d=0.7,` +
+      `format=yuv420p`;
+
+    await run('ffmpeg', [
       '-hide_banner',
       '-loglevel', 'error',
       '-y',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', listFile,
+      '-loop', '1',
+      '-framerate', String(FPS),
+      '-i', imagePaths[i],
+      '-vf', zoomFilter,
+      '-t', segmentDuration.toFixed(3),
+      '-an',
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
-      '-crf', '23',
+      '-crf', '20',
       '-pix_fmt', 'yuv420p',
       '-r', String(FPS),
-      '-an',
-      '-movflags', '+faststart',
-      outputFile
-    ], 20 * 60 * 1000);
+      output
+    ], 300000);
 
-    const duration = await getDuration(outputFile);
-
-    log(`TEST PASSED. Rendered duration: ${duration.toFixed(2)} seconds.`);
-    log(`Test output: ${outputFile}`);
-    log('The original render.js and Google Drive files were not modified.');
-  } finally {
-    fs.rmSync(workDir, { recursive: true, force: true });
+    segmentPaths.push(output);
+    console.log(`Rendered scene ${i + 1}/${imagePaths.length}`);
   }
+
+  const concatFile = path.join(assetsDir, 'concat.txt');
+
+  fs.writeFileSync(
+    concatFile,
+    segmentPaths.map(file => `file '${file}'`).join('\n') + '\n',
+    'utf8'
+  );
+
+  const silentVideo = path.join(assetsDir, 'silent-video.mp4');
+
+  await run('ffmpeg', [
+    '-hide_banner',
+    '-loglevel', 'error',
+    '-y',
+    '-f', 'concat',
+    '-safe', '0',
+    '-i', concatFile,
+    '-c:v', 'libx264',
+    '-preset', 'ultrafast',
+    '-crf', '20',
+    '-pix_fmt', 'yuv420p',
+    '-r', String(FPS),
+    '-an',
+    silentVideo
+  ], 600000);
+
+  const finalVideo = path.join(outDir, 'huygens-titan-pilot.mp4');
+
+  console.log('Mixing narration and cinematic ambient sound...');
+
+  await run('ffmpeg', [
+    '-hide_banner',
+    '-loglevel', 'error',
+    '-y',
+    '-i', silentVideo,
+    '-i', narrationPath,
+    '-f', 'lavfi',
+    '-i', 'anoisesrc=color=brown:amplitude=0.025:sample_rate=48000',
+    '-filter_complex',
+    '[1:a]aresample=48000,volume=1.0[voice];' +
+    '[2:a]lowpass=f=180,volume=0.12[ambience];' +
+    '[voice][ambience]amix=inputs=2:duration=first:dropout_transition=2,' +
+    'alimiter=limit=0.95[aout]',
+    '-map', '0:v:0',
+    '-map', '[aout]',
+    '-c:v', 'copy',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-ar', '48000',
+    '-shortest',
+    '-movflags', '+faststart',
+    finalVideo
+  ], 300000);
+
+  const finalInfo = await run('ffprobe', [
+    '-v', 'error',
+    '-show_entries', 'format=duration:stream=codec_type,width,height',
+    '-of', 'json',
+    finalVideo
+  ]);
+
+  const metadata = JSON.parse(finalInfo.stdout);
+
+  if (!metadata.streams.some(stream => stream.codec_type === 'audio')) {
+    throw new Error('Final video has no audio stream.');
+  }
+
+  fs.writeFileSync(
+    path.join(outDir, 'credits.txt'),
+    [
+      'Documentary pilot: Huygens and Titan',
+      '',
+      'NASA/JPL/ESA/University of Arizona imagery:',
+      NASA_IMAGES.map(item => item.url).join('\n'),
+      '',
+      'Narration: generated with eSpeak NG.',
+      'Ambient sound: synthesized for this pilot.'
+    ].join('\n'),
+    'utf8'
+  );
+
+  console.log('SUCCESS');
+  console.log(`Video: ${finalVideo}`);
+  console.log(`Duration: ${metadata.format.duration} seconds`);
+  console.log('Resolution: 1920x1080');
 }
 
 main().catch(error => {
-  console.error('[render-test] TEST FAILED:', error.message);
+  console.error('DOCUMENTARY PILOT FAILED:', error.stack || error.message);
   process.exitCode = 1;
 });
