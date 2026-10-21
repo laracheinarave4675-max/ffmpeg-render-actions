@@ -411,6 +411,17 @@ function pairSum() {
   const folderId = await findOrCreateFolder(accessToken, 'StarVideoProject');
   const filename = payload.filename || ('render_' + Date.now() + '.mp4');
   console.log('Uploading to Drive as ' + filename + '...');
+  // --- optional finishing: finish (visual look) and master_audio (loudness) in ONE re-encode.
+  // Read from payload or, because the router forwards only known fields, from clips[0].direction.fx ---
+  const _fx0 = (payload.clips && payload.clips[0] && payload.clips[0].direction && payload.clips[0].direction.fx) || {};
+  const _finishReq = payload.finish || _fx0.finish;
+  const _masterReq = payload.master_audio || _fx0.master_audio;
+  if (_finishReq || _masterReq) {
+    const fp = require('./director/finish_pass.cjs');
+    const fpOut = path.join(workDir, 'final_finished.mp4');
+    const fr = fp.applyFinishPass(finalPath, fpOut, { finish: _finishReq, master_audio: _masterReq });
+    if (fr.applied) { finalPath = fr.outPath; console.log('Finish pass applied: visual=' + fr.visual + ' audio=' + fr.audio); }
+  }
   const fileId = await uploadToDrive(accessToken, finalPath, filename, folderId);
   console.log('DRIVE_FILE_ID=' + fileId);
 
