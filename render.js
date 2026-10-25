@@ -65,7 +65,99 @@ async function mixWithEnding(o) {
   return T;
 }
 
+// ---- Original scene engine + procedural audio (local, no downloads) ----
+// https://scene.local/<scene_id>?d=<seconds>  -> rendered by scenes/render_scene.py
+// https://asset.local/sfx/<name>.wav | /music/<name>.wav -> synthesized by scenes/audio_gen.py
+let _pyReady = false;
+function ensurePython() {
+  if (_pyReady) return;
+  const { execSync } = require('child_process');
+  try { execSync('python3 -c "import numpy, scipy, cv2, PIL"', { stdio: 'ignore' }); }
+  catch (e) { execSync('python3 -m pip install -q numpy scipy opencv-python-headless pillow', { stdio: 'inherit' }); }
+  _pyReady = true;
+}
+function localScheme(url, dest) {
+  const { execFileSync } = require('child_process');
+  const sceneDir = path.join(__dirname, 'scenes');
+  if (url.startsWith('https://scene.local/')) {
+    ensurePython();
+    const u = new URL(url);
+    const id = u.pathname.replace(/^\//, '');
+    const d = parseFloat(u.searchParams.get('d') || '5');
+    console.log('Rendering original scene ' + id + ' (' + d + 's)');
+    execFileSync('python3', [path.join(sceneDir, 'render_scene.py'), id, String(d), dest], { stdio: 'inherit' });
+    return true;
+  }
+  if (url.startsWith('https://asset.local/')) {
+    ensurePython();
+    const rel = new URL(url).pathname.replace(/^\//, '');
+    const outDir = path.join(sceneDir, 'audio_out');
+    const full = path.join(outDir, rel);
+    if (!fs.existsSync(full)) {
+      const name = path.basename(rel).replace(/\.[a-z0-9]+$/i, '');
+      console.log('Synthesizing audio asset ' + rel);
+      execFileSync('python3', [path.join(sceneDir, 'audio_gen.py'), outDir, name], { stdio: 'inherit' });
+    }
+    fs.copyFileSync(full, dest);
+    return true;
+  }
+  return false;
+}
+
+// ---- Code bundle delivered through Google Drive (so the scene engine can be updated without touching this repo) ----
+// A manifest JSON on Drive lists {files:{name:fileId}, sha256:{name:hex}}. Scene URLs carry ?m=<manifestFileId>.
+let _bundleId = null;
+const _crypto = require('crypto');
+async function ensureSceneBundle(mid) {
+  if (!mid || _bundleId === mid) return;
+  const dir = path.join(__dirname, 'scenes');
+  fs.mkdirSync(dir, { recursive: true });
+  let manifest;
+  let getBytes;
+  if (mid.startsWith('local:')) {   // local test mode: local:/abs/dir containing manifest.json + files
+    const base = mid.slice(6);
+    manifest = JSON.parse(fs.readFileSync(path.join(base, 'manifest.json'), 'utf8'));
+    getBytes = async (name) => fs.readFileSync(path.join(base, name));
+  } else {
+    const creds = JSON.parse(Buffer.from(process.env.GDRIVE_OAUTH_B64, 'base64').toString('utf8'));
+    const tok = await getAccessToken(creds);
+    const getId = async (id) => {
+      const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media', { headers: { Authorization: 'Bearer ' + tok } });
+      if (!r.ok) throw new Error('Drive bundle download failed for ' + id + ': HTTP ' + r.status + ' (the OAuth account must be able to read this file)');
+      return Buffer.from(await r.arrayBuffer());
+    };
+    manifest = JSON.parse((await getId(mid)).toString('utf8'));
+    getBytes = async (name) => getId(manifest.files[name]);
+  }
+  for (const name of Object.keys(manifest.files)) {
+    const buf = await getBytes(name);
+    const want = manifest.sha256 && manifest.sha256[name];
+    if (want) {
+      const got = _crypto.createHash('sha256').update(buf).digest('hex');
+      if (got !== want) throw new Error('Bundle checksum mismatch for ' + name + ' (expected ' + want.slice(0, 12) + ', got ' + got.slice(0, 12) + ')');
+    }
+    fs.writeFileSync(path.join(dir, name), buf);
+  }
+  // fonts are fetched from the public Google Fonts repository
+  const fdir = path.join(dir, 'fonts');
+  fs.mkdirSync(fdir, { recursive: true });
+  for (const f of ['Poppins-Bold.ttf', 'Poppins-Medium.ttf', 'Poppins-Regular.ttf']) {
+    const p = path.join(fdir, f);
+    if (!fs.existsSync(p)) {
+      const r = await fetch('https://github.com/google/fonts/raw/main/ofl/poppins/' + f);
+      if (!r.ok) throw new Error('Font download failed: ' + f + ' HTTP ' + r.status);
+      fs.writeFileSync(p, Buffer.from(await r.arrayBuffer()));
+    }
+  }
+  _bundleId = mid;
+  console.log('Scene bundle loaded: ' + Object.keys(manifest.files).length + ' files');
+}
+
 async function downloadFile(url, dest) {
+  if (url.startsWith('https://scene.local/') || url.startsWith('https://asset.local/')) {
+    await ensureSceneBundle(new URL(url).searchParams.get('m'));
+  }
+  if (localScheme(url, dest)) return;
   let res = await fetch(url);
   if (!res.ok) throw new Error('Failed to download ' + url + ': HTTP ' + res.status);
   const contentType = res.headers.get('content-type') || '';
