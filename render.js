@@ -73,7 +73,11 @@ function ensurePython() {
   if (_pyReady) return;
   const { execSync } = require('child_process');
   try { execSync('python3 -c "import numpy, scipy, cv2, PIL"', { stdio: 'ignore' }); }
-  catch (e) { execSync('python3 -m pip install -q numpy scipy opencv-python-headless pillow', { stdio: 'inherit' }); }
+  catch (e) {
+    const pk = 'numpy scipy opencv-python-headless pillow';
+    try { execSync('python3 -m pip install -q --break-system-packages ' + pk, { stdio: 'inherit' }); }
+    catch (e2) { execSync('python3 -m pip install -q ' + pk, { stdio: 'inherit' }); }
+  }
   _pyReady = true;
 }
 function localScheme(url, dest) {
@@ -249,6 +253,28 @@ async function uploadToDrive(accessToken, filePath, filename, folderId) {
     body: JSON.stringify({ role: 'reader', type: 'anyone' })
   });
   return finalJson.id;
+}
+
+// ---- Render log: everything printed is also uploaded to Drive as a text file (readable without GitHub access) ----
+const _LOG = [];
+(function () {
+  const ol = console.log.bind(console), oe = console.error.bind(console);
+  const push = (a) => { try { _LOG.push(a.map(x => typeof x === 'string' ? x : (x && x.stack) || JSON.stringify(x)).join(' ')); if (_LOG.length > 600) _LOG.shift(); } catch (e) {} };
+  console.log = (...a) => { push(a); ol(...a); };
+  console.error = (...a) => { push(a); oe(...a); };
+})();
+async function uploadRenderLog(tag) {
+  try {
+    const creds = JSON.parse(Buffer.from(process.env.GDRIVE_OAUTH_B64, 'base64').toString('utf8'));
+    const tok = await getAccessToken(creds);
+    const folderId = await findOrCreateFolder(tok, 'StarVideoProject');
+    let name = 'renderlog_' + tag + '_' + (process.env.GITHUB_RUN_ID || 'local') + '.txt';
+    try { const p = JSON.parse(Buffer.from(process.env.PAYLOAD_B64 || '', 'base64').toString('utf8')); if (p.filename) name = 'renderlog_' + tag + '_' + String(p.filename).replace(/[^A-Za-z0-9_.-]/g, '_') + '.txt'; } catch (e) {}
+    const tmp = path.join(require('os').tmpdir(), 'renderlog.txt');
+    fs.writeFileSync(tmp, _LOG.join('\n') + '\n');
+    const id = await uploadToDrive(tok, tmp, name, folderId);
+    console.log('RENDER_LOG_FILE_ID=' + id);
+  } catch (e) { console.error('Render log upload failed: ' + e.message); }
 }
 
 // ---- Main render pipeline ----
@@ -516,6 +542,7 @@ function pairSum() {
   }
   const fileId = await uploadToDrive(accessToken, finalPath, filename, folderId);
   console.log('DRIVE_FILE_ID=' + fileId);
+  await uploadRenderLog('ok');
 
   const summary = { success: true, fileId, filename, sizeMB: Math.round(fs.statSync(finalPath).size / 1024 / 1024) };
   fs.mkdirSync('results', { recursive: true });
@@ -525,8 +552,9 @@ function pairSum() {
   }
 }
 
-main().catch(err => {
+main().catch(async err => {
   console.error('RENDER_FAILED: ' + (err.stack || err.message || err));
+  await uploadRenderLog('FAILED');
   const summary = { success: false, error: String(err.message || err) };
   fs.mkdirSync('results', { recursive: true });
   fs.writeFileSync(path.join('results', (process.env.GITHUB_RUN_ID || 'local') + '.json'), JSON.stringify(summary, null, 2));
