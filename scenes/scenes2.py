@@ -268,3 +268,272 @@ def f_t32(t, T, tg, cap):
     items = [{'k': 'line', 'x1': X0, 'y1': Y, 'x2': X1, 'y2': Y, 'wd': 6, 'c': (90, 105, 140)},
              {'k': 'text', 'x': X0, 'y': Y + 50, 't': 'BIG BANG', 's': 24, 'w': 'Medium', 'c': GR},
              {'k': 'text', 'x': X1, 'y': Y + 50, 't': 'TODAY · 13.8 BILLION YEARS', 's': 24, 'w': 'Medium', 'c': GR, 'an': 'rm'}]
+    a1 = sm(A(u, 0.1, 0.3))
+    items += [{'k': 'dot', 'x': xl, 'y': Y, 'r': 14, 'c': GOLD, 'a': a1},
+              {'k': 'text', 'x': xl, 'y': Y - 70, 't': 'LIGHT LEAVES', 's': 30, 'c': GOLD, 'a': a1},
+              {'k': 'text', 'x': xl, 'y': Y - 36, 't': 'UNIVERSE ≈ 3 BILLION YEARS OLD', 's': 22, 'w': 'Medium', 'c': WH, 'a': a1}]
+    p = sm(A(u, 0.35, 0.85)); xe = lerp(xl, X1, p)
+    items += [{'k': 'line', 'x1': xl, 'y1': Y, 'x2': xe, 'y2': Y, 'wd': 8, 'c': (255, 235, 170), 'a': a1},
+              {'k': 'dot', 'x': xe, 'y': Y, 'r': 10, 'c': (255, 250, 230), 'a': a1},
+              {'k': 'text', 'x': (xl + X1) / 2, 'y': Y + 130, 't': '≈ 10.8 BILLION YEARS OF TRAVEL', 's': 34, 'c': (255, 235, 170), 'a': sm(A(u, 0.5, 0.75))}]
+    return overlay(vignette(img), items)
+
+def f_t33(t, T, tg, cap):
+    u = sm(t / T)
+    img = quasar(tg, 640, 360, lerp(8, 120, u ** 1.4), expo=lerp(1.4, 1.0, u))
+    items = [{'k': 'text', 'x': 640, 'y': 620, 't': 'QUASAR', 's': 70, 'c': WH, 'a': sm(A(t / T, 0.6, 0.9))}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_t34(t, T, tg, cap):
+    u = t / T
+    img = quasar(tg, 520, 380, 150)
+    a1 = sm(A(u, 0.35, 0.55)); a2 = sm(A(u, 0.65, 0.85))
+    items = [{'k': 'line', 'x1': 520, 'y1': 380, 'x2': 900, 'y2': 170, 'wd': 2, 'c': WH, 'a': a1},
+             {'k': 'text', 'x': 910, 'y': 150, 't': 'THE BLACK HOLE: DARK', 's': 30, 'c': WH, 'an': 'lm', 'a': a1},
+             {'k': 'line', 'x1': 680, 'y1': 420, 'x2': 900, 'y2': 560, 'wd': 2, 'c': GOLD, 'a': a2},
+             {'k': 'text', 'x': 910, 'y': 580, 't': 'THE DISK OF GAS: SHINES', 's': 30, 'c': GOLD, 'an': 'lm', 'a': a2}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_t35(t, T, tg, cap):
+    u = t / T
+    img = quasar(tg, 520, 380, 150, inflow=1.0)
+    items = [{'k': 'text', 'x': 900, 'y': 190, 't': 'GAS SPIRALS INWARD', 's': 32, 'c': WH, 'an': 'lm', 'a': sm(A(u, 0.1, 0.3))},
+             {'k': 'text', 'x': 900, 'y': 250, 't': 'FRICTION HEATS IT', 's': 32, 'c': (255, 190, 130), 'an': 'lm', 'a': sm(A(u, 0.4, 0.6))},
+             {'k': 'text', 'x': 900, 'y': 290, 't': 'TO MILLIONS OF DEGREES', 's': 24, 'w': 'Medium', 'c': (255, 190, 130), 'an': 'lm', 'a': sm(A(u, 0.4, 0.6))},
+             {'k': 'text', 'x': 900, 'y': 380, 't': 'THE DISK IS WHAT SHINES', 's': 32, 'c': GOLD, 'an': 'lm', 'a': sm(A(u, 0.7, 0.9))}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_t36(t, T, tg, cap):
+    u = t / T
+    img = quasar(tg, 360, 380, 120, expo=lerp(0.8, 1.6, u))
+    n = int(140 * sm(A(u, 0.05, 0.55)))
+    items = [{'k': 'text', 'x': 900, 'y': 230, 't': f'{n} TRILLION SUNS', 's': 52, 'c': GOLD, 'a': sm(A(u, 0.05, 0.2))},
+             {'k': 'text', 'x': 900, 'y': 290, 't': 'OF LIGHT', 's': 30, 'w': 'Medium', 'c': WH, 'a': sm(A(u, 0.05, 0.2))},
+             {'k': 'text', 'x': 900, 'y': 430, 't': 'THOUSANDS OF TIMES', 's': 38, 'c': WH, 'a': sm(A(u, 0.6, 0.8))},
+             {'k': 'text', 'x': 900, 'y': 478, 't': 'THE ENTIRE MILKY WAY', 's': 38, 'c': (170, 195, 255), 'a': sm(A(u, 0.6, 0.8))}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+
+def orbit_scene(t, T, tg, cap, panels, items_extra=None, bgm=0.5):
+    """panels: list of dict(cx,cy,sc,kind,key,x0,y0,vx,vy,GM,drag,turns,label,sub)"""
+    u = t / T
+    img = dark(bgm).copy(); items = []
+    for pn in panels:
+        steps = 6000
+        pts = traj(pn['key'], pn.get('x0', 1.0), pn.get('y0', 0.0), pn.get('vx', 0.0), pn.get('vy', 1.0), pn.get('GM', 1.0), 0.006, steps, pn.get('drag', 0.0))
+        i = int(min(steps - 1, u * pn.get('frac', 0.95) * steps * pn.get('turns', 1.0)))
+        trail(img, pts, i, pn['cx'], pn['cy'], pn['sc'], pn.get('col', (1.0, 0.9, 0.5)), n=pn.get('trail', 90), step=3)
+        img = center_obj(img, pn['kind'], pn['cx'], pn['cy'], pn.get('cr', 16))
+        px, py = planet_xy(pts, i, pn['cx'], pn['cy'], pn['sc'])
+        img = glowdot(img, px, py, pn.get('pr', 6), (0.5, 0.8, 1.0), 2.0)
+        if pn.get('label'):
+            items.append({'k': 'text', 'x': pn['cx'], 'y': pn.get('ly', 100), 't': pn['label'], 's': pn.get('ls', 28), 'c': WH, 'a': sm(A(u, 0.05, 0.25))})
+        if pn.get('sub'):
+            items.append({'k': 'text', 'x': pn['cx'], 'y': pn.get('ly', 100) + 36, 't': pn['sub'], 's': 20, 'w': 'Medium', 'c': GR, 'a': sm(A(u, 0.15, 0.35))})
+        if pn.get('vec'):
+            vx = pts[min(i + 1, steps - 1)] - pts[i]; vn = np.linalg.norm(vx) + 1e-9; vx = vx / vn
+            items.append({'k': 'line', 'x1': px, 'y1': py, 'x2': px + vx[0] * 90, 'y2': py + vx[1] * 90, 'wd': 4, 'c': CY})
+            gx, gy = (-pts[i][0], -pts[i][1]); gn = np.hypot(gx, gy) + 1e-9
+            items.append({'k': 'line', 'x1': px, 'y1': py, 'x2': px + gx / gn * 70, 'y2': py + gy / gn * 70, 'wd': 4, 'c': (255, 150, 120)})
+    if items_extra: items += items_extra(u)
+    return overlay(vignette(img), items, caption=cap)
+
+def f_t37(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [dict(cx=640, cy=370, sc=230, kind='bh', key='t37', cr=18, turns=1.6, col=(1.0, 0.7, 0.3))],
+                       lambda u: [{'k': 'text', 'x': 640, 'y': 640, 't': 'YOU WATCH WHAT ORBITS IT', 's': 44, 'c': GOLD, 'a': sm(A(u, 0.4, 0.7))}])
+def f_t38(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [
+        dict(cx=340, cy=380, sc=190, kind='bh', key='t38a', cr=10, GM=0.5, vy=0.707, turns=1.0, label='LESS MASS', sub='SLOWER ORBIT', ly=110),
+        dict(cx=940, cy=380, sc=190, kind='bh', key='t38b', cr=22, GM=2.0, vy=1.414, turns=2.8, label='MORE MASS', sub='FASTER ORBIT', ly=110)])
+def broad(t, T, tg, cap, sig, texts):
+    img = dark(0.35).copy(); items = []
+    xs = np.arange(140, 1141)
+    base_y = 520
+    for s, col, hh in sig:
+        ys = base_y - hh * np.exp(-0.5 * ((xs - 640) / s) ** 2)
+        pts = np.stack([xs, ys], 1)
+        fill = np.concatenate([pts, [[1140, base_y], [140, base_y]]]).astype(np.int32)
+        lay = np.zeros_like(img); cv2.fillPoly(lay, [fill.reshape(-1, 1, 2)], col); img = img + lay * 0.28
+        poly(img, pts, col, 3)
+    items.append({'k': 'line', 'x1': 140, 'y1': base_y, 'x2': 1140, 'y2': base_y, 'wd': 2, 'c': GR})
+    items.append({'k': 'text', 'x': 640, 'y': base_y + 36, 't': 'WAVELENGTH OF ONE SPECTRAL LINE', 's': 20, 'w': 'Medium', 'c': GR})
+    items += texts(t / T)
+    return overlay(vignette(img), items, caption=cap)
+def f_t39a(t, T, tg, cap):
+    u = t / T
+    s2 = lerp(14, 20, 0) + 70 * sm(A(u, 0.25, 0.7))
+    return broad(t, T, tg, cap, [(14, (0.5, 0.8, 1.0), 300), (max(s2, 14), (1.0, 0.8, 0.4), 300 * 14 / max(s2, 14) * 1.1)], lambda u: [
+        {'k': 'text', 'x': 640, 'y': 100, 't': 'FASTER GAS SMEARS THE LINE WIDER', 's': 40, 'c': WH, 'a': sm(A(u, 0.1, 0.35))},
+        {'k': 'text', 'x': 400, 'y': 250, 't': 'SLOW GAS: NARROW', 's': 24, 'c': (130, 200, 255), 'a': sm(A(u, 0.2, 0.4))},
+        {'k': 'text', 'x': 900, 'y': 380, 't': 'FAST GAS NEAR THE BLACK HOLE: WIDE', 's': 24, 'c': GOLD, 'a': sm(A(u, 0.6, 0.85))}])
+def f_t39b(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [dict(cx=640, cy=380, sc=210, kind='sun', key='t39', cr=22, turns=1.3, ly=100,
+                                           label='SAME LOGIC', sub="WEIGH THE SUN FROM THE EARTH'S ORBIT", ls=40)])
+
+def f_t40(t, T, tg, cap):
+    u = t / T
+    img = dark(0.4).copy(); items = []
+    x0 = 330; X = lambda v: x0 + (v - 20) / (80 - 20) * 760
+    items += [{'k': 'line', 'x1': X(20), 'y1': 560, 'x2': X(80), 'y2': 560, 'wd': 2, 'c': GR}]
+    for v in (20, 40, 60, 80):
+        items += [{'k': 'text', 'x': X(v), 'y': 590, 't': str(v), 's': 18, 'w': 'Medium', 'c': GR}]
+    items += [{'k': 'text', 'x': 640, 'y': 640, 't': 'BILLIONS OF SOLAR MASSES', 's': 20, 'w': 'Medium', 'c': GR}]
+    a1 = sm(A(u, 0.05, 0.4)); a2 = sm(A(u, 0.5, 0.85))
+    items += [{'k': 'text', 'x': 330, 'y': 160, 't': 'USING THE LIGHT OF HYDROGEN', 's': 28, 'c': GOLD, 'an': 'lm', 'a': a1},
+              {'k': 'rect', 'x1': X(20), 'y1': 200, 'x2': X(20) + (X(66) - X(20)) * a1, 'y2': 250, 'c': GOLD, 'a': 0.9},
+              {'k': 'text', 'x': X(66) + 18, 'y': 225, 't': '≈ 66 BILLION', 's': 34, 'c': WH, 'an': 'lm', 'a': a1},
+              {'k': 'text', 'x': 330, 'y': 340, 't': 'USING A DIFFERENT SPECTRAL LINE', 's': 28, 'c': CY, 'an': 'lm', 'a': a2},
+              {'k': 'rect', 'x1': X(20), 'y1': 380, 'x2': X(20) + (X(40) - X(20)) * a2, 'y2': 430, 'c': CY, 'a': 0.9},
+              {'k': 'text', 'x': X(40) + 18, 'y': 405, 't': '≈ 40 BILLION', 's': 34, 'c': WH, 'an': 'lm', 'a': a2}]
+    return overlay(vignette(img), items, caption=cap)
+def f_t41(t, T, tg, cap):
+    u = t / T
+    img = dark(0.4).copy(); items = []
+    x0 = 160; X = lambda v: x0 + (v - 20) / (80 - 20) * 960
+    a = sm(A(u, 0.1, 0.45))
+    items += [{'k': 'rect', 'x1': X(40), 'y1': 300, 'x2': X(40) + (X(66) - X(40)) * a, 'y2': 380, 'c': GOLD, 'a': 0.85},
+              {'k': 'line', 'x1': X(20), 'y1': 420, 'x2': X(80), 'y2': 420, 'wd': 2, 'c': GR},
+              {'k': 'text', 'x': 640, 'y': 150, 't': 'ESTIMATES, NOT DIRECT WEIGHINGS', 's': 44, 'c': WH, 'a': sm(A(u, 0.05, 0.3))},
+              {'k': 'text', 'x': 640, 'y': 220, 't': 'BUILT ON ASSUMPTIONS', 's': 28, 'w': 'Medium', 'c': GR, 'a': sm(A(u, 0.3, 0.55))},
+              {'k': 'text', 'x': 640, 'y': 520, 't': '≈ 40–66 BILLION SOLAR MASSES', 's': 52, 'c': GOLD, 'a': sm(A(u, 0.6, 0.85))}]
+    for v in (20, 40, 60, 80): items.append({'k': 'text', 'x': X(v), 'y': 450, 't': str(v), 's': 18, 'w': 'Medium', 'c': GR})
+    return overlay(vignette(img), items, caption=cap)
+def f_t42(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.8, 640, 360, 130 * (0.9 + 0.1 * u), shadow=True, ring=True)
+    items = [{'k': 'text', 'x': 640, 'y': 360, 't': '?', 's': 150, 'c': WH, 'a': 0.0}]
+    items += [{'k': 'text', 'x': 640, 'y': 620, 't': 'WHAT DOES IT LOOK LIKE?', 's': 44, 'c': WH, 'a': sm(A(u, 0.3, 0.6))}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def eht_icon(img, cx, cy, r, ph):
+    yy, xx = gy_, gx_
+    d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2); phi = np.arctan2(yy - cy, xx - cx)
+    ring = np.exp(-((d - r) / (0.22 * r)) ** 2) * (0.5 + 0.5 * np.cos(phi - ph)) ** 1.2
+    col = np.stack([ring * 1.0, ring * 0.55, ring * 0.2], 2)
+    return screen(img, np.clip(col, 0, 1))
+def f_t43(t, T, tg, cap):
+    u = t / T
+    img = dark(0.5).copy()
+    img = eht_icon(img, 340, 360, 120, 0.6) if u > 0.1 else img
+    img = eht_icon(img, 940, 360, 120, 2.3) if u > 0.5 else img
+    a1 = sm(A(u, 0.1, 0.3)); a2 = sm(A(u, 0.5, 0.7))
+    items = [{'k': 'text', 'x': 340, 'y': 540, 't': 'M87*', 's': 40, 'c': WH, 'a': a1},
+             {'k': 'text', 'x': 340, 'y': 586, 't': 'GALAXY M87', 's': 20, 'w': 'Medium', 'c': GR, 'a': a1},
+             {'k': 'text', 'x': 940, 'y': 540, 't': 'SAGITTARIUS A*', 's': 40, 'c': WH, 'a': a2},
+             {'k': 'text', 'x': 940, 'y': 586, 't': 'CENTER OF THE MILKY WAY', 's': 20, 'w': 'Medium', 'c': GR, 'a': a2},
+             {'k': 'text', 'x': 640, 'y': 90, 't': 'SHADOWS OF TWO BLACK HOLES, PHOTOGRAPHED', 's': 32, 'c': GOLD, 'a': a1}]
+    return overlay(vignette(img), items, caption=cap, tag='SCHEMATIC · NOT THE REAL IMAGES')
+def f_t44(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.8, 640, 340, 125, shadow=True, ring=True)
+    items = [{'k': 'text', 'x': 640, 'y': 570, 't': 'NO IMAGE OF TON 618 EXISTS', 's': 46, 'c': WH, 'a': sm(A(u, 0.1, 0.35))},
+             {'k': 'text', 'x': 640, 'y': 626, 't': "WHAT YOU SEE: AN ARTIST'S CONCEPT", 's': 26, 'w': 'Medium', 'c': GOLD, 'a': sm(A(u, 0.5, 0.75))}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+
+def f_t45(t, T, tg, cap):
+    u = t / T
+    return orbit_scene(t, T, tg, cap, [dict(cx=640, cy=330, sc=170, kind='bh', key='t45a', cr=16, turns=1.2, col=(1.0, 0.7, 0.3), trail=120),
+                                       dict(cx=640, cy=330, sc=250, kind='bh', key='t45b', cr=0, GM=1.0, x0=1.0, y0=0.0, vy=0.72, turns=1.0, trail=120)],
+                       lambda u: [{'k': 'text', 'x': 640, 'y': 640, 't': 'BLACK HOLES DO NOT SUCK.', 's': 62, 'c': WH, 'a': sm(A(u, 0.15, 0.45))}])
+def gcurve(t, T, tg, cap, stage):
+    u = t / T
+    img = dark(0.35).copy(); items = []
+    ox, oy, w, h = 200, 560, 880, 400
+    LX = lambda d: ox + (np.log10(d) + 2) / 4.0 * w
+    LY = lambda g: oy - (np.log10(g) + 4) / 8.0 * h
+    items += [{'k': 'line', 'x1': ox, 'y1': oy, 'x2': ox + w, 'y2': oy, 'wd': 2, 'c': GR}, {'k': 'line', 'x1': ox, 'y1': oy, 'x2': ox, 'y2': oy - h, 'wd': 2, 'c': GR},
+              {'k': 'text', 'x': ox + w / 2, 'y': oy + 38, 't': 'DISTANCE FROM THE CENTER', 's': 22, 'w': 'Medium', 'c': GR},
+              {'k': 'text', 'x': ox + 8, 'y': oy - h - 22, 't': 'GRAVITY', 's': 22, 'w': 'Medium', 'c': GR, 'an': 'lm'}]
+    ds = np.logspace(-1.5, 1.8, 200); gs = 1.0 / ds ** 2
+    pts_all = [(LX(d), LY(g)) for d, g in zip(ds, gs) if oy - h <= LY(g) <= oy]
+    ds_sun = ds[ds >= 1.0]; pts_sun = [(LX(d), LY(1.0 / d ** 2)) for d in ds_sun]
+    p = sm(A(u, 0.05, 0.6))
+    n = max(2, int(len(pts_sun) * p)); poly(img, pts_sun[:n], (0.5, 0.8, 1.0), 4)
+    sx = LX(1.0)
+    items += [{'k': 'line', 'x1': sx, 'y1': oy - h, 'x2': sx, 'y2': oy, 'wd': 1, 'c': (140, 160, 200), 'a': 0.6},
+              {'k': 'text', 'x': sx + 8, 'y': oy - h + 18, 't': 'SURFACE OF THE SUN', 's': 18, 'w': 'Medium', 'c': (130, 200, 255), 'an': 'lm'}]
+    if stage >= 1:
+        n2 = max(2, int(len(pts_all) * sm(A(u, 0.05, 0.7)))); 
+        poly(img, pts_all[:n2], (1.0, 0.8, 0.4), 2)
+    items += [{'k': 'text', 'x': 640, 'y': 70, 't': 'GRAVITY DEPENDS ON ONLY TWO THINGS', 's': 38, 'c': WH, 'a': sm(A(u, 0.1, 0.3)) if stage == 0 else 1},
+              {'k': 'text', 'x': 640, 'y': 118, 't': 'MASS  AND  DISTANCE', 's': 34, 'c': GOLD, 'a': sm(A(u, 0.3, 0.55)) if stage == 0 else 1}]
+    if stage >= 1:
+        items += [{'k': 'text', 'x': 840, 'y': 300, 't': 'SAME MASS = SAME GRAVITY', 's': 28, 'c': GOLD, 'a': sm(A(u, 0.4, 0.65))},
+                  {'k': 'text', 'x': 840, 'y': 338, 't': 'FAR AWAY', 's': 28, 'c': GOLD, 'a': sm(A(u, 0.4, 0.65))}]
+    if stage == 2:
+        items += [{'k': 'text', 'x': 330, 'y': 215, 't': 'ONLY A BLACK HOLE LETS YOU GET THIS CLOSE', 's': 22, 'c': (255, 190, 120), 'an': 'lm', 'a': sm(A(u, 0.55, 0.85))}]
+    return overlay(vignette(img), items, caption=cap)
+def f_t46(t, T, tg, cap): return gcurve(t, T, tg, cap, 0)
+def f_t47(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [
+        dict(cx=340, cy=390, sc=200, kind='sun', key='t47a', cr=24, turns=1.3, label='THE SUN', sub='TODAY', ly=110),
+        dict(cx=940, cy=390, sc=200, kind='bh', key='t47a', cr=14, turns=1.3, label='A BLACK HOLE · SAME MASS', sub='SAME ORBIT · IT DOES NOT FALL IN', ly=110, ls=26)])
+def f_t48(t, T, tg, cap): return gcurve(t, T, tg, cap, 2)
+def f_t49(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [dict(cx=640, cy=360, sc=210, kind='sun', key='t49', cr=24, turns=1.2, vec=False)],
+                       lambda u: [{'k': 'text', 'x': 640, 'y': 90, 't': 'THE EARTH IS FALLING TOWARD THE SUN', 's': 38, 'c': WH, 'a': sm(A(u, 0.1, 0.35))},
+                                  {'k': 'text', 'x': 640, 'y': 640, 't': 'FALLING FOR 4.5 BILLION YEARS. AND MISSING.', 's': 36, 'c': GOLD, 'a': sm(A(u, 0.45, 0.75))}])
+def f_t50(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [dict(cx=640, cy=370, sc=215, kind='sun', key='t49', cr=24, turns=1.2, vec=True)],
+                       lambda u: [{'k': 'text', 'x': 1000, 'y': 150, 't': '~30 KM/S SIDEWAYS', 's': 30, 'c': CY, 'a': sm(A(u, 0.1, 0.35))},
+                                  {'k': 'text', 'x': 1000, 'y': 196, 't': 'GRAVITY PULLS INWARD', 's': 30, 'c': (255, 150, 120), 'a': sm(A(u, 0.3, 0.55))}])
+def f_t51(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [
+        dict(cx=230, cy=400, sc=130, kind='sun', key='t51a', cr=14, vy=0.0, turns=0.6, label='NO SIDEWAYS SPEED', sub='FALLS STRAIGHT IN', ly=130, ls=22, col=(1.0, 0.5, 0.4)),
+        dict(cx=640, cy=400, sc=130, kind='sun', key='t51b', cr=14, vy=0.6, turns=1.4, label='A LITTLE SPEED', sub='FALLS, BUT MISSES · ELLIPSE', ly=130, ls=22),
+        dict(cx=1050, cy=400, sc=130, kind='sun', key='t51c', cr=14, vy=1.0, turns=1.3, label='ENOUGH SPEED', sub='KEEPS MISSING · CIRCLE', ly=130, ls=22, col=(0.5, 1.0, 0.7))],
+        lambda u: [{'k': 'text', 'x': 640, 'y': 640, 't': 'AN ORBIT IS FALLING, AND MISSING', 's': 40, 'c': GOLD, 'a': sm(A(u, 0.5, 0.8))}])
+def f_t52(t, T, tg, cap):
+    return orbit_scene(t, T, tg, cap, [
+        dict(cx=340, cy=400, sc=170, kind='bh', key='t52a', cr=12, vy=1.0, turns=2.0, label='KEEPS ANGULAR MOMENTUM', sub='CIRCLES. FOREVER.', ly=110, ls=24, col=(0.5, 1.0, 0.7)),
+        dict(cx=940, cy=400, sc=170, kind='bh', key='t52b', cr=12, vy=1.0, drag=0.06, turns=2.0, label='GIVES IT UP', sub='SPIRALS IN', ly=110, ls=24, col=(1.0, 0.5, 0.4))],
+        lambda u: [{'k': 'text', 'x': 640, 'y': 640, 't': 'ANGULAR MOMENTUM: THE SIDEWAYS MOTION', 's': 34, 'c': GOLD, 'a': sm(A(u, 0.1, 0.35))}])
+def f_t53(t, T, tg, cap):
+    u = t / T
+    img = dark(0.45).copy(); items = []
+    cx, cy = 640, 370
+    img = center_obj(img, 'bh', cx, cy, 10)
+    specs = [(1.0, 0.88, 0.0, 16.0, (0.5, 0.8, 1.0), 'S2 · ≈ 16 YEARS'), (1.9, 0.5, 2.0, 55.0, (1.0, 0.8, 0.4), ''), (2.6, 0.3, 4.0, 110.0, (0.6, 1.0, 0.7), '')]
+    for a, e, w, per, col, nm in specs:
+        pts = []
+        for k in range(360):
+            th = k / 360 * 2 * np.pi; r = a * (1 - e * e) / (1 + e * np.cos(th))
+            pts.append((cx + 118 * r * np.cos(th + w) * 1.0, cy + 118 * r * np.sin(th + w) * 0.78))
+        poly(img, pts, tuple(c * 0.5 for c in col), 1)
+        M = (t / T) * (T / per) * 12 * 2 * np.pi
+        E = M
+        for _ in range(8): E = M + e * np.sin(E)
+        th = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))
+        r = a * (1 - e * e) / (1 + e * np.cos(th))
+        px = cx + 118 * r * np.cos(th + w); py = cy + 118 * r * np.sin(th + w) * 0.78
+        img = glowdot(img, px, py, 5, col, 2.0)
+        if nm: items.append({'k': 'text', 'x': px + 14, 'y': py - 18, 't': nm, 's': 20, 'c': (170, 215, 255), 'an': 'lm'})
+    items += [{'k': 'text', 'x': 640, 'y': 70, 't': 'STARS AT THE CENTER OF THE MILKY WAY', 's': 32, 'c': WH, 'a': sm(A(u, 0.05, 0.3))},
+              {'k': 'text', 'x': 640, 'y': 640, 't': 'THOUSANDS OF KM/S  ·  THEY DO NOT FALL IN', 's': 34, 'c': GOLD, 'a': sm(A(u, 0.5, 0.8))}]
+    return overlay(vignette(img), items, caption=cap, tag='SIMPLIFIED ILLUSTRATION')
+def f_t54(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.7, 960, 360, 120)
+    items = [{'k': 'text', 'x': 120, 'y': 250, 't': 'GRAVITY PULLS.', 's': 66, 'c': WH, 'an': 'lm', 'a': sm(A(u, 0.1, 0.35))},
+             {'k': 'text', 'x': 120, 'y': 380, 't': 'ONLY LOSING ORBITAL MOTION', 's': 50, 'c': GOLD, 'an': 'lm', 'a': sm(A(u, 0.45, 0.7))},
+             {'k': 'text', 'x': 120, 'y': 450, 't': 'LETS ANYTHING ARRIVE.', 's': 50, 'c': GOLD, 'an': 'lm', 'a': sm(A(u, 0.55, 0.8))}]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+
+FUNCS2 = {k: globals()['f_' + k.split('_')[0]] for k, *_ in SEQ2}
+
+if __name__ == '__main__':
+    mode = sys.argv[1]
+    if mode == 'plan':
+        for k, t, p in SEQ2: print(f'{k:14s} start {START2[k]:6.1f}  dur {DUR2[k]:5.1f}')
+        print('TOTAL2', round(TOTAL2, 1), 'END', round(BASE + TOTAL2, 1))
+    elif mode == 'frames':
+        only = sys.argv[2:] or [k for k, *_ in SEQ2]
+        for k, t, p in SEQ2:
+            if k not in only: continue
+            T = DUR2[k]; fr = FUNCS2[k](T * 0.7, T, START2[k] + T * 0.7, None)
+            Image.fromarray(fr).resize((640, 360)).save(f'{OUT}/f_{k}.png')
+        print('ok')
+    elif mode == 'render':
+        only = sys.argv[2:] or [k for k, *_ in SEQ2]
+        for i, (k, t, p) in enumerate(SEQ2):
+            if k not in only: continue
+            T = DUR2[k] + (0.5 if i < len(SEQ2) - 1 else 0)
+            render_scene(k, T, FUNCS2[k], START2[k], caption=t)
+        print('RENDER_DONE', flush=True)
+    elif mode == 'assemble':
+        S1.assemble([k for k, *_ in SEQ2], DUR2, os.path.join(OUT,'preview_part1b.mp4')); print('ASSEMBLED')
