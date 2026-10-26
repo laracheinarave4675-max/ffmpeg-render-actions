@@ -282,10 +282,43 @@ function escText(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "\\'");
 }
 
+// ---- Store mode: write scene-engine files into the repo (scenes/) and push. Lets the engine be updated through a normal render request ----
+// payload.clips[0].direction.fx.store_files = [{ path:'scenes/x.py', lines:[...], mode:'write'|'append', sha256:'hex of the final file (optional)' }]
+// The placeholders (U+00A7)DQ(U+00A7) and (U+00A7)BS(U+00A7) stand for a double quote and a backslash so the text survives JSON transport.
+async function storeFiles(files) {
+  const { execSync } = require('child_process');
+  const root = __dirname;
+  const DQ = '\u00a7DQ\u00a7', BS = '\u00a7BS\u00a7';
+  for (const f of files) {
+    const rel = String(f.path || '');
+    if (!/^scenes\/[A-Za-z0-9_\-\/]+\.(py|json|txt|md)$/.test(rel) || rel.includes('..')) throw new Error('store: path not allowed: ' + rel);
+    const abs = path.join(root, rel);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    let text = (f.lines || []).join('\n') + '\n';
+    text = text.split(DQ).join('"').split(BS).join('\\');
+    if (f.mode === 'append') fs.appendFileSync(abs, text); else fs.writeFileSync(abs, text);
+    const got = _crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+    console.log('store: ' + rel + ' ' + fs.statSync(abs).size + ' bytes sha256=' + got);
+    if (f.sha256 && f.sha256 !== got) throw new Error('store: checksum mismatch for ' + rel + ' (expected ' + f.sha256.slice(0, 12) + ', got ' + got.slice(0, 12) + ')');
+  }
+  execSync('git config user.name "render-bot" && git config user.email "render-bot@users.noreply.github.com"');
+  execSync('git add scenes');
+  try { execSync('git commit -m "Update scene engine files via render payload"', { stdio: 'inherit' }); } catch (e) { console.log('store: nothing to commit'); }
+  try { execSync('git pull --rebase origin main', { stdio: 'inherit' }); } catch (e) { console.log('store: pull failed: ' + e.message); }
+  execSync('git push origin HEAD:main', { stdio: 'inherit' });
+  console.log('store: pushed');
+}
+
 async function main() {
   const payload = JSON.parse(Buffer.from(process.env.PAYLOAD_B64, 'base64').toString('utf8'));
   const oauthCreds = JSON.parse(Buffer.from(process.env.GDRIVE_OAUTH_B64, 'base64').toString('utf8'));
   const clips = payload.clips || [];
+  const _storeFx = (clips[0] && clips[0].direction && clips[0].direction.fx) || {};
+  if (_storeFx.store_files) {
+    await storeFiles(_storeFx.store_files);
+    await uploadRenderLog('store');
+    return;
+  }
 // Director layer: optional music ducking (sidechain). Enabled by payload.music_duck or clips[].direction.audio.music_duck
 const duckCfg = payload.music_duck || (function () {
   const c = clips.find(function (x) { return x && x.direction && x.direction.audio && x.direction.audio.music_duck; });
