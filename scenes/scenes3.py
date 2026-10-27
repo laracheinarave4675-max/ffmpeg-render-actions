@@ -383,3 +383,191 @@ def f_u24(t, T, tg, cap):
     if not merged:
         for (x, y, rad) in [(x1, y1, 12), (x2, y2, 10)]:
             circ(img, x, y, rad, (0, 0, 0)); circ(img, x, y, rad * 1.3, (1.0, 0.6, 0.25), 2)
+        img = glowdot(img, x1, y1, 12, (1.0, 0.55, 0.2), 1.2); img = glowdot(img, x2, y2, 10, (1.0, 0.55, 0.2), 1.2)
+    else:
+        f = A(u, 0.88, 1.0)
+        img = glowdot(img, cx, cy, 16 + 30 * f, (1.0, 0.95, 0.85), 2.2 * (1 - f * 0.5))
+        for k in range(4):
+            items.append({'k': 'ring', 'x': cx, 'y': cy, 'r': 20 + 480 * ((f + k * 0.2) % 1), 'c': CY, 'wd': 2, 'a': 0.6 * (1 - ((f + k * 0.2) % 1))})
+        items.append(I(cx, 600, 'GRAVITATIONAL WAVES', 36, CY, fadein(u, 0.9)))
+    items += [I(640, 60, 'TWO BLACK HOLES SPIRAL TOGETHER', 32, WH, fadein(u, 0.05)), I(640, 660, 'STARS THAT STRAY TOO CLOSE ARE HURLED AWAY', 26, GOLD, fadein(u, 0.4) * (1 - fadein(u, 0.85)))]
+    return overlay(vignette(img), items, caption=cap, tag='SIMPLIFIED ILLUSTRATION')
+def f_u25(t, T, tg, cap):
+    u = t / T
+    m = sm(A(u, 0.15, 0.85))
+    g = G
+    X = g.X; Y = g.Y; Z = g.Z * (1 + 10 * m)
+    w = g.w * np.clip((g.R - 0.38 * m) / 0.25, 0, 1)[:, None] * (1 - 0.0 * m)
+    gg = Galaxy.__new__(Galaxy); gg.X = X; gg.Y = Y; gg.Z = Z; gg.R = g.R; gg.w = w.astype(np.float32)
+    img = screen(BG * 0.8, gal_layer(gg, 640, 370, 400, lerp(62, 52, m), tg, expo=1.1))
+    q = sm(A(u, 0.45, 0.8))
+    if q > 0.02: img = glowdot(img, 640, 370, 12 + 20 * q, (1.0, 0.85, 0.55), 2.5 * q)
+    items = [I(640, 60, 'THE CENTER IS SCOURED OF STARS', 34, WH, fadein(u, 0.1)), I(640, 640, 'THE THIN SPIRAL IS THICKENED, HEATED, RESHAPED', 30, GOLD, fadein(u, 0.6)),
+             I(640, 600, 'GAS MAY IGNITE AS A QUASAR', 24, (255, 215, 150), fadein(u, 0.5) * (1 - fadein(u, 0.58)))]
+    return overlay(vignette(img), items, caption=cap, tag='CONCEPTUAL ILLUSTRATION')
+def f_u26(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4; items = []
+    names = ['SPEED', 'ANGLE', 'HOW CLOSE']
+    for i, n in enumerate(names):
+        y = 220 + i * 120
+        k = 0.5 + 0.4 * np.sin(u * 7 + i * 2.1)
+        items += [I(90, y, n, 26, WH, 1, 'lm'), {'k': 'line', 'x1': 90, 'y1': y + 34, 'x2': 460, 'y2': y + 34, 'wd': 4, 'c': (110, 130, 170)},
+                  {'k': 'dot', 'x': 90 + 370 * k, 'y': y + 34, 'r': 12, 'c': GOLD}]
+    # diverging outcomes
+    for j in range(7):
+        pts = []
+        for s_ in np.linspace(0, 1, 40):
+            x = 600 + 600 * s_; y = 380 + (j - 3) * 90 * s_ ** 1.5 + 20 * np.sin(s_ * 9 + j + u * 3)
+            pts.append((x, y))
+        p = sm(A(u, 0.15 + j * 0.02, 0.8))
+        n = int(len(pts) * p)
+        for a, b in zip(pts[:n - 1], pts[1:n]):
+            items.append({'k': 'line', 'x1': a[0], 'y1': a[1], 'x2': b[0], 'y2': b[1], 'wd': 3, 'c': (255, 215, 120), 'a': 0.8})
+    items += [I(640, 90, 'THE STARTING CONDITIONS DECIDE THE OUTCOME', 34, WH, fadein(u, 0.05)), I(900, 650, 'NO SINGLE OUTCOME', 52, GOLD, fadein(u, 0.7))]
+    return overlay(vignette(img), items, caption=cap)
+def f_u27(t, T, tg, cap):
+    u = t / T
+    img = comp_gb(tg, bhx=1040, th=85 + 10 * u)
+    return overlay(vignette(img), [I(640, 650, 'A GALAXY AND A BLACK HOLE OF TENS OF BILLIONS OF SUNS', 26, GR, fadein(u, 0.4), w='Medium')], caption=cap, tag=TAG)
+def listcard(t, T, tg, cap, lines, start=0.1, step=0.2, title=None, col=WH):
+    u = t / T
+    img = comp_gb(tg, bhx=1250, th=40, gcx=1040, gs=150, expo=0.8)
+    items = [I(400, 100, title, 34, GOLD, fadein(u, 0.02))] if title else []
+    for i, ln in enumerate(lines):
+        a = fadein(u, start + i * step)
+        items += [{'k': 'dot', 'x': 120, 'y': 220 + i * 90, 'r': 7, 'c': GOLD, 'a': a}, I(150, 220 + i * 90, ln, 34, col, a, 'lm')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u28(t, T, tg, cap):
+    return listcard(t, T, tg, cap, ['SCATTER ITS STARS', 'SCAR ITS DISK', 'REWRITE ITS CENTER', 'LIGHT IT UP AS A QUASAR'], 0.34, 0.15, 'THE MASS IS REAL')
+def f_u29(t, T, tg, cap):
+    return listcard(t, T, tg, cap, ['STARS ORBIT', 'THEY CARRY ANGULAR MOMENTUM', 'SPACE IS ALMOST EMPTY', 'THE HORIZON IS TINY', 'MOST STARS SURVIVE, ON NEW PATHS'], 0.22, 0.14, 'WHY IT IS MISLEADING')
+def f_u30(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.5, 1020, 360, 100)
+    items = [I(380, 250, 'NO.', 200, WH, fadein(u, 0.08, 0.2)), I(380, 430, 'NOT LIKE THAT.', 50, GOLD, fadein(u, 0.35)),
+             I(380, 520, 'A SLIVER OF THE STARS · PERHAPS MOST OF THE GAS', 22, WH, fadein(u, 0.7), w='Medium'), I(380, 556, 'EVERYTHING ELSE CHANGED', 22, GR, fadein(u, 0.78), w='Medium')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u31(t, T, tg, cap):
+    u = t / T
+    img = enc(tg, 300, 380, 200, 60, lerp(1000, 1250, sm(u)), 350, lerp(85, 40, sm(u)), expo=0.8)
+    p = sm(A(u, 0.3, 0.9))
+    items = [I(640, 90, 'A THOUGHT EXPERIMENT', 52, WH, fadein(u, 0.05)), I(640, 640, 'TON 618 IS NOT HEADING TOWARD US', 36, GOLD, fadein(u, 0.5)),
+             {'k': 'line', 'x1': 520, 'y1': 350, 'x2': 520 + 380 * p, 'y2': 350, 'wd': 3, 'c': (150, 190, 255), 'a': 0.8},
+             I(700, 310, 'THE UNIVERSE EXPANDS BETWEEN US', 22, (170, 200, 255), fadein(u, 0.4), w='Medium')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u32(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.5, 1020, 360, 100)
+    a1 = fadein(u, 0.05) * (1 - 0.75 * fadein(u, 0.4, 0.55))
+    items = [I(380, 220, 'CAN IT SWALLOW A GALAXY?', 44, WH, a1), {'k': 'line', 'x1': 90, 'y1': 220, 'x2': 90 + 580 * sm(A(u, 0.35, 0.5)), 'y2': 220, 'wd': 5, 'c': (255, 120, 100)},
+             I(380, 380, 'HOW DID IT GROW?', 80, GOLD, fadein(u, 0.55, 0.75))]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u33(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4
+    X0, X1, Y = 140, 1140, 300
+    xl = X0 + (X1 - X0) * 3.0 / 13.8
+    items = [{'k': 'line', 'x1': X0, 'y1': Y, 'x2': X1, 'y2': Y, 'wd': 6, 'c': (90, 105, 140)}, I(X0, Y + 50, 'BIG BANG', 22, GR, 1, 'mm', 'Medium'),
+             {'k': 'dot', 'x': xl, 'y': Y, 'r': 14, 'c': GOLD}, I(xl, Y - 60, 'ONLY ≈ 3 BILLION YEARS OLD', 28, GOLD, fadein(u, 0.1))]
+    g = sm(A(u, 0.3, 0.85))
+    items += [I(xl + 40, 470, 'ALREADY ≈ 40–66 BILLION SUNS', 38, WH, fadein(u, 0.3), 'lm'),
+              {'k': 'rect', 'x1': xl + 40, 'y1': 510, 'x2': xl + 40 + 520 * g, 'y2': 550, 'c': GOLD, 'a': 0.9}]
+    return overlay(vignette(img), items, caption=cap)
+def f_u34(t, T, tg, cap):
+    u = t / T
+    rng = np.random.default_rng(21)
+    yy, xx = gy_, gx_
+    d = np.sqrt((xx - 640) ** 2 + (yy - 360) ** 2)
+    R = 120 + 300 * sm(A(u, 0.05, 0.6))
+    n = cv2.GaussianBlur(rng.random((H // 8, W // 8)).astype(np.float32), (0, 0), 1.2)
+    n = cv2.resize(n, (W, H), interpolation=cv2.INTER_CUBIC)
+    cloud = np.exp(-(d / R) ** 2) * (0.6 + 0.8 * n) * 0.45
+    img = screen(BG * 0.5, np.stack([cloud * 0.75, cloud * 0.55, cloud * 1.0], 2))
+    img = glowdot(img, 640, 360, 10, (1.0, 0.95, 0.85), 3.0)
+    mw = gal_layer(G, 640, 360, 110, 62, tg, expo=0.9)
+    img = screen(img, mw * fadein(u, 0.45))
+    items = [{'k': 'ring', 'x': 640, 'y': 360, 'r': R * 1.2, 'c': (170, 150, 255), 'wd': 2, 'a': 0.5},
+             I(640, 70, 'AN ENORMOUS CLOUD OF GAS', 40, WH, fadein(u, 0.1)), I(640, 110, 'AROUND THE QUASAR AND ITS HOST GALAXY  ·  ALMA, 2021', 22, GR, fadein(u, 0.2), w='Medium'),
+             I(640, 620, 'AT LEAST ≈ 330,000 LIGHT-YEARS ACROSS', 34, (200, 185, 255), fadein(u, 0.55)), I(640, 660, 'THE MILKY WAY: ≈ 100,000', 22, GR, fadein(u, 0.65), w='Medium')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u35(t, T, tg, cap):
+    u = t / T
+    img = gal(640, 370, 380, 58, tg, expo=1.0)
+    r = 8 + 14 * sm(u)
+    img = center_obj(img, 'bh', 640, 370, r)
+    items = [I(640, 70, 'IT GROWS INSIDE A GALAXY', 46, WH, fadein(u, 0.1)), I(640, 640, 'FED BY THE GAS AROUND IT', 36, GOLD, fadein(u, 0.5))]
+    for k in range(12):
+        ph = (u * 0.8 + k / 12.0) % 1.0
+        a0 = k * 0.52; rr = 330 * (1 - ph)
+        x = 640 + rr * np.cos(a0 + ph * 3); y = 370 + rr * 0.55 * np.sin(a0 + ph * 3)
+        items.append({'k': 'dot', 'x': x, 'y': y, 'r': 3, 'c': (255, 200, 130), 'a': 0.8 * (ph < 0.95)})
+    return overlay(vignette(img), items, caption=cap, tag='CONCEPTUAL ILLUSTRATION')
+def f_u36(t, T, tg, cap):
+    u = t / T
+    grid = np.zeros((H, W, 3), np.float32)
+    for x in range(-W, 2 * W, 56): cv2.line(grid, (x, 0), (x, H), (0.20, 0.55, 0.75), 1, cv2.LINE_AA)
+    for y in range(-H, 2 * H, 56): cv2.line(grid, (0, y), (W, y), (0.20, 0.55, 0.75), 1, cv2.LINE_AA)
+    dx = gx_ - 640; dy = gy_ - 380; d2 = dx * dx + dy * dy
+    f = 1 + 4.0 / (1 + d2 / (150.0 ** 2))
+    base = screen(BG * 0.5, grid * 0.6)
+    img = cv2.remap(base, (640 + dx * f).astype(np.float32), (380 + dy * f).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    img = img * (1 - 0.9 * np.exp(-d2 / (2 * 24 ** 2))[:, :, None])
+    items = []
+    for j, (a, e) in enumerate([(1.0, 0.0), (1.7, 0.3), (2.5, 0.5)]):
+        for s_ in np.linspace(0, 1, 90):
+            th = (u * 0.5 + j * 0.3 + s_ * 0.0)
+        ph = u * 2 * np.pi * (1.2 / (j + 1)) + j
+        for k in range(26, 0, -1):
+            q = ph - k * 0.05
+            x = 640 + 120 * a * np.cos(q); y = 380 + 90 * a * np.sin(q)
+            items.append({'k': 'dot', 'x': x, 'y': y, 'r': 2.5, 'c': GOLD, 'a': 0.5 * (1 - k / 26)})
+        items.append({'k': 'dot', 'x': 640 + 120 * a * np.cos(ph), 'y': 380 + 90 * a * np.sin(ph), 'r': 6, 'c': (255, 235, 170)})
+    items += [I(640, 70, 'GRAVITY IS NOT A HUNGER', 46, WH, fadein(u, 0.05)), I(640, 650, 'IT IS GEOMETRY', 52, GOLD, fadein(u, 0.5))]
+    return overlay(vignette(img), items, caption=cap)
+def f_u37(t, T, tg, cap):
+    u = t / T
+    img = gal(640, 370, 400, 58, tg, expo=0.9)
+    items = []
+    rng = np.random.default_rng(31)
+    for j in range(22):
+        a = 0.2 + rng.random() * 0.9; ph0 = rng.random() * 6.28; w = 1.0 / (0.3 + a) * 0.9
+        ph = ph0 + u * 4 * w
+        for k in range(18, 0, -1):
+            q = ph - k * 0.06
+            items.append({'k': 'dot', 'x': 640 + a * 400 * np.cos(q), 'y': 370 + a * 400 * 0.62 * np.sin(q), 'r': 2, 'c': (180, 210, 255), 'a': 0.5 * (1 - k / 18)})
+        items.append({'k': 'dot', 'x': 640 + a * 400 * np.cos(ph), 'y': 370 + a * 400 * 0.62 * np.sin(ph), 'r': 4, 'c': (255, 255, 255)})
+    bx = lerp(-100, 1380, sm(u)); by = 160 + 120 * np.sin(u * 3)
+    img = center_obj(img, 'bh', bx, by, 22)
+    items += [I(640, 650, 'ONE MORE TRAVELER BOUND BY THE SAME RULES', 34, GOLD, fadein(u, 0.5)), I(640, 60, 'A HUNDRED BILLION STARS, EACH ON ITS OWN PATH', 28, WH, fadein(u, 0.05))]
+    return overlay(vignette(img), items, caption=cap, tag='CONCEPTUAL ILLUSTRATION')
+def f_u38(t, T, tg, cap):
+    u = t / T
+    out = orbit_scene(t, T, tg, cap, [
+        dict(cx=340, cy=380, sc=200, kind='sun', key='u38a', cr=22, turns=1.4, label='THE EARTH AND THE SUN', ly=110, ls=24),
+        dict(cx=940, cy=380, sc=200, kind='bh', key='u38b', cr=16, GM=1.0, turns=1.4, label='A STAR AND A BLACK HOLE', ly=110, ls=24, col=(1.0, 0.7, 0.3))],
+        lambda u: [I(640, 650, 'EVEN THE LARGEST MONSTER CANNOT TAKE WHAT DOES NOT FALL.', 30, GOLD, fadein(u, 0.62, 0.8))])
+    return out
+
+FUNCS3 = {k: globals()['f_' + k.split('_')[0]] for k, *_ in SEQ3}
+
+if __name__ == '__main__':
+    mode = sys.argv[1]
+    if mode == 'plan':
+        for k, t, p in SEQ3: print(f'{k:14s} start {START3[k]:6.1f} dur {DUR3[k]:5.1f}')
+        print('TOTAL3', round(TOTAL3, 1))
+    elif mode == 'frames':
+        only = sys.argv[2:] or [k for k, *_ in SEQ3]
+        for k, t, p in SEQ3:
+            if k not in only: continue
+            T = DUR3[k]; fr = FUNCS3[k](T * 0.7, T, START3[k] + T * 0.7, None)
+            Image.fromarray(fr).resize((640, 360)).save(f'{OUT}/f_{k}.png')
+        print('ok')
+    elif mode == 'render':
+        import engine
+        only = sys.argv[2:] or [k for k, *_ in SEQ3]
+        for i, (k, t, p) in enumerate(SEQ3):
+            if k not in only: continue
+            T = DUR3[k] + (0.5 if i < len(SEQ3) - 1 else 0)
+            engine.render_scene(k, T, FUNCS3[k], START3[k], caption=t, review=True)
+        print('RENDER_DONE', flush=True)
