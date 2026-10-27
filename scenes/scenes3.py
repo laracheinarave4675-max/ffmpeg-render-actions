@@ -188,3 +188,198 @@ def f_u07(t, T, tg, cap):
     img = BG * 0.45
     items = [I(640, 90, 'THREE VERY DIFFERENT STORIES', 44, WH, 1)]
     cards = [(240, '1', 'FLYBY'), (640, '2', 'PLUNGE'), (1040, '3', 'IT STAYS')]
+    for i, (x, n, nm) in enumerate(cards):
+        a = fadein(u, 0.2 + i * 0.22)
+        items += [{'k': 'ring', 'x': x, 'y': 330, 'r': 110, 'c': GOLD, 'wd': 3, 'a': 0.85 * a}, I(x, 330, n, 90, GOLD, a), I(x, 500, nm, 40, WH, a)]
+    return overlay(vignette(img), items, caption=cap)
+def f_u08(t, T, tg, cap):
+    return sim_frame('flyby', t / T, 640, 360, 190, 55, cap, 'SCENARIO 1 · A DISTANT FLYBY', 'THE GALAXY IS SCARRED, NOT EATEN',
+                     lambda u: [I(640, 650, 'TIDAL FORCES STRETCH THE DISK', 30, WH, fadein(u, 0.55))])
+def f_u09(t, T, tg, cap):
+    return sim_frame('plunge', t / T, 640, 380, 300, 62, cap, 'SCENARIO 2 · A PLUNGE THROUGH THE DISK', 'MOST STARS: REARRANGED, NOT REMOVED',
+                     lambda u: [I(640, 660, 'SHAKEN · WARPED · HEATED', 30, WH, fadein(u, 0.5))])
+def f_u10(t, T, tg, cap):
+    return sim_frame('sink', t / T, 640, 380, 270, 60, cap, 'SCENARIO 3 · IT STAYS', 'DYNAMICAL FRICTION: IT SINKS TOWARD THE CENTER',
+                     lambda u: [I(640, 660, 'SAGITTARIUS A*', 34, (255, 225, 160), fadein(u, 0.8, 0.95))])
+def f_u11(t, T, tg, cap):
+    u = t / T
+    img = gal(640, 370, 380, 60, tg, expo=0.6)
+    img = center_obj(img, 'bh', 640, 370, 8)
+    items = [I(640, 620, 'WHAT HAPPENS NEXT?', 56, WH, fadein(u, 0.2))]
+    return overlay(vignette(img), items, caption=cap if False else cap, tag=TAG)
+def f_u12(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.5, 960, 360, 110)
+    items = [I(330, 300, 'MASS', 110, GOLD, fadein(u, 0.1)), I(330, 420, '≠', 110, WH, fadein(u, 0.3)), I(330, 540, 'CAPTURE', 110, WH, fadein(u, 0.5))]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u13(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.45
+    cx, cy = 780, 360; R = 70
+    img = lens(img, cx, cy, 130, shadow=True, ring=True)
+    items = []
+    for k in range(7):
+        y0 = 120 + k * 80
+        pts = []
+        for xx in range(60, 700, 8):
+            dx = xx - cx; dy = y0 - cy
+            b = dy; rr = np.hypot(dx, dy) + 1
+            bend = -dy / (abs(dy) + 30) * 200 * np.exp(-((dx) / 260) ** 2)
+            pts.append((xx, y0 + bend * sm(A(u, 0.05, 0.5))))
+        pr = sm(A(u, 0.0, 0.5))
+        items += [{'k': 'line', 'x1': pts[i][0], 'y1': pts[i][1], 'x2': pts[i + 1][0], 'y2': pts[i + 1][1], 'wd': 2, 'c': (255, 235, 170), 'a': 0.5 * pr} for i in range(len(pts) - 1)]
+    items += [{'k': 'ring', 'x': cx, 'y': cy, 'r': 72, 'c': GOLD, 'wd': 3, 'a': fadein(u, 0.4, 0.6)},
+              I(cx, 560, 'EVENT HORIZON', 36, GOLD, fadein(u, 0.45)), I(cx, 604, 'INSIDE IT, NOTHING ESCAPES — NOT EVEN LIGHT', 22, WH, fadein(u, 0.6, 0.8), w='Medium')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u14(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4
+    cx, cy = 640, 370; R = 280
+    zi = sm(A(u, 0.0, 0.2))
+    yy, xx = gy_, gx_
+    d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+    img = img * np.clip((d - R * zi) / 3, 0, 1)[:, :, None]
+    items = [{'k': 'ring', 'x': cx, 'y': cy, 'r': R * zi + 1, 'c': GOLD, 'wd': 4},
+             {'k': 'ring', 'x': cx, 'y': cy, 'r': 30 / 1300 * R + 1, 'c': (130, 200, 255), 'wd': 2, 'a': fadein(u, 0.4, 0.55)},
+             {'k': 'dot', 'x': cx, 'y': cy, 'r': 3, 'c': (255, 230, 150), 'a': fadein(u, 0.4, 0.55)},
+             I(cx, 90, 'EVENT HORIZON  ·  RADIUS ≈ 1,300 AU', 36, GOLD, fadein(u, 0.15)),
+             I(cx, 660, "≈ 0.04 LIGHT-YEARS ACROSS", 34, WH, fadein(u, 0.75)),
+             I(cx + 150, cy - 40, "NEPTUNE'S ORBIT", 22, (150, 210, 255), fadein(u, 0.45), 'lm'),
+             I(cx + 150, cy - 10, "30 AU  ·  THE SOLAR SYSTEM FITS 40+ TIMES", 20, GR, fadein(u, 0.5), 'lm', 'Medium')]
+    return overlay(vignette(img), items, caption=cap, tag='TO SCALE')
+def f_u15(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4
+    items = []
+    p = sm(A(u, 0.1, 0.45))
+    cx, cy = 640, 360
+    items += [{'k': 'ring', 'x': cx, 'y': cy, 'r': 290 * p + 1, 'c': (150, 180, 255), 'wd': 3},
+              I(cx, 60, 'THE GALAXY  =  A CITY 50 KM ACROSS', 34, (190, 205, 255), fadein(u, 0.2)),
+              {'k': 'dot', 'x': cx, 'y': cy, 'r': 3, 'c': (255, 225, 140), 'a': fadein(u, 0.5, 0.65)},
+              {'k': 'ring', 'x': cx, 'y': cy, 'r': 10 + 5 * np.sin(t * 6), 'c': GOLD, 'wd': 2, 'a': fadein(u, 0.55, 0.7)},
+              I(cx, 660, 'THE HORIZON  =  A COIN IN THE MIDDLE', 36, GOLD, fadein(u, 0.62)),
+              I(cx, 560, '≈ 2,500,000 × SMALLER', 30, WH, fadein(u, 0.78))]
+    return overlay(vignette(img), items, caption=cap, tag='SCALE ANALOGY')
+def f_u16(t, T, tg, cap):
+    pans = [dict(cx=640, cy=370, sc=250, kind='bh', key='u16a', cr=14, vy=v, x0=1.0, y0=0.0, turns=tr, col=(0.6, 0.8, 1.0), trail=100)
+            for v, tr in [(0.5, 1.3), (0.62, 1.5), (0.78, 1.7), (0.95, 1.9)]]
+    pans = [dict(p, key=f'u16_{i}') for i, p in enumerate(pans)]
+    pans.append(dict(cx=640, cy=370, sc=250, kind='bh', key='u16_plunge', cr=14, vy=0.02, x0=1.0, y0=0.0, turns=0.5, col=(1.0, 0.45, 0.35), trail=100))
+    return orbit_scene(t, T, tg, cap, pans, lambda u: [I(640, 80, 'THE LOSS CONE', 46, WH, fadein(u, 0.1)),
+                                                      I(640, 640, 'ONLY NEAR-HEAD-ON ORBITS FALL IN. THE REST KEEP MISSING.', 28, GOLD, fadein(u, 0.5), w='Bold')])
+def f_u17(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4
+    items = [I(640, 100, 'ONE STAR SWALLOWED OR TORN APART', 38, WH, fadein(u, 0.05)),
+             I(640, 150, 'EVERY ≈ 10,000 TO 100,000 YEARS', 40, GOLD, fadein(u, 0.15)),
+             {'k': 'line', 'x1': 120, 'y1': 400, 'x2': 1160, 'y2': 400, 'wd': 3, 'c': (110, 130, 170)}]
+    for k in range(11):
+        x = 120 + k * 104
+        items.append({'k': 'line', 'x1': x, 'y1': 388, 'x2': x, 'y2': 412, 'wd': 2, 'c': (110, 130, 170)})
+    for k, fr in enumerate([0.25, 0.62]):
+        x = 120 + 1040 * fr
+        a = fadein(u, fr * 0.9, fr * 0.9 + 0.1)
+        if a > 0.02: img = glowdot(img.copy(), x, 400, 14, (1.0, 0.8, 0.4), 2.5 * a)
+    items += [I(120, 450, '0', 20, GR, 1, 'mm', 'Medium'), I(1160, 450, '100,000 YEARS', 20, GR, 1, 'rm', 'Medium'),
+              I(640, 600, 'MOST STARS NEVER COME NEAR', 34, WH, fadein(u, 0.7))]
+    return overlay(vignette(img), items, caption=cap)
+def f_u18(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4; items = []
+    for cx, kind, big in [(330, 'small', False), (950, 'big', True)]:
+        r = 14 if not big else 46
+        img = center_obj(img, 'bh', cx, 380, r)
+        p = sm(A(u, 0.15, 0.8))
+        sx = cx - 240 + (240 - r * 2.6) * p
+        sy = 380 - 90 * (1 - p)
+        near = sm(A(p, 0.55, 1.0))
+        stretch = 1 + (7 * near if not big else 0.0)
+        w = 9 * (1.0 if big else (1 - 0.6 * near))
+        lay = np.zeros_like(img)
+        cv2.ellipse(lay, (int(sx), int(sy)), (int(w * stretch) + 1, int(max(2, w * 0.7))), 20 if not big else 0, 0, 360, (1.0, 0.9, 0.5), -1, cv2.LINE_AA)
+        img = screen(img, np.clip(cv2.GaussianBlur(lay, (0, 0), 3) * 1.4 + lay, 0, 1))
+    items += [I(330, 190, 'SAGITTARIUS A*', 30, WH, fadein(u, 0.05)), I(330, 230, 'THE STAR IS TORN APART', 22, (255, 150, 120), fadein(u, 0.6), w='Medium'),
+              I(950, 190, 'TON 618', 30, GOLD, fadein(u, 0.4)), I(950, 230, 'GENTLER TIDES AT THE HORIZON', 22, (150, 230, 170), fadein(u, 0.7), w='Medium')]
+    return overlay(vignette(img), items, caption=cap, tag='SIMPLIFIED ILLUSTRATION')
+def f_u19(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.6, 780, 360, 150)
+    p = sm(A(u, 0.1, 0.7))
+    sx = lerp(180, 780, p); sy = lerp(260, 360, p)
+    rr = np.hypot(sx - 780, sy - 360)
+    vis = float(np.clip((rr - 82) / 20, 0, 1))
+    if vis > 0.02: img = glowdot(img.copy(), sx, sy, 8, (1.0, 0.92, 0.6), 2.0 * vis)
+    items = [I(380, 120, '≈ 100 MILLION SUNS', 36, WH, fadein(u, 0.05)), I(380, 165, 'THE LIMIT FOR SUN-LIKE STARS TO CROSS WHOLE', 20, GR, fadein(u, 0.1), w='Medium'),
+             I(780, 630, 'TON 618: WHOLE · NO FLASH', 44, GOLD, fadein(u, 0.7))]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u20(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4; rng = np.random.default_rng(4)
+    items = [{'k': 'line', 'x1': 640, 'y1': 140, 'x2': 640, 'y2': 600, 'wd': 1, 'c': (90, 105, 140), 'a': 0.6}]
+    p = sm(A(u, 0.1, 0.9))
+    for i in range(30):
+        y = 200 + rng.random() * 360
+        xa = 40 + rng.random() * 40 + 560 * p; xb = 590 - rng.random() * 40 - 560 * p
+        img = glowdot(img.copy(), xa, y, 3, (0.6, 0.8, 1.0), 1.4)
+        img = glowdot(img, xb, y + 20, 3, (1.0, 0.85, 0.6), 1.4)
+    c = sm(A(u, 0.1, 0.55)); hot = sm(A(u, 0.5, 0.85))
+    for k, (dy) in enumerate([-60, 0, 60]):
+        xl = 700 + 160 * c; xr = 1200 - 160 * c
+        col = (0.5 + 0.5 * hot, 0.55 + 0.1 * hot, 0.8 - 0.5 * hot)
+        lay = np.zeros_like(img); cv2.circle(lay, (int(xl), 370 + dy), 44, col, -1, cv2.LINE_AA); cv2.circle(lay, (int(xr), 370 - dy), 44, col, -1, cv2.LINE_AA)
+        img = screen(img, np.clip(cv2.GaussianBlur(lay, (0, 0), 14) * 0.7, 0, 1))
+    if hot > 0.05: img = glowdot(img, 940, 370, 40, (1.0, 0.8, 0.4), 2.5 * hot)
+    items += [I(320, 100, 'STARS: PASS THROUGH EACH OTHER', 26, (150, 200, 255), fadein(u, 0.05)), I(960, 100, 'GAS: COLLIDES, HEATS, SHINES', 26, (255, 200, 140), fadein(u, 0.35))]
+    return overlay(vignette(img), items, caption=cap, tag='SIMPLIFIED ILLUSTRATION')
+def f_u21(t, T, tg, cap):
+    u = t / T
+    img = quasar(tg, 360, 380, 135, inflow=1.0)
+    items = [I(760, 200, 'GAS LOSES ITS ANGULAR MOMENTUM', 24, WH, fadein(u, 0.1), 'lm'), I(760, 245, 'AND SPIRALS INWARD', 24, WH, fadein(u, 0.2), 'lm'),
+             I(760, 360, 'THIS FEEDS THE QUASAR', 30, GOLD, fadein(u, 0.5), 'lm'), I(760, 405, 'TON 618 IS SWALLOWING GAS RIGHT NOW', 20, (255, 220, 160), fadein(u, 0.7), 'lm', 'Medium')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u22(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.4; items = []
+    x0, x1, y0, y1 = 140, 640, 180, 560
+    drain = sm(A(u, 0.25, 0.8))
+    level = 1 - drain
+    items += [{'k': 'rect', 'x1': x0, 'y1': y0, 'x2': x1, 'y2': y1, 'c': (30, 34, 50), 'a': 0.9},
+              {'k': 'rect', 'x1': x0, 'y1': y1 - (y1 - y0) * level, 'x2': x1, 'y2': y1, 'c': (255, 170, 90), 'a': 0.85},
+              I((x0 + x1) // 2, 130, 'GAS IN THE MILKY WAY', 28, WH, fadein(u, 0.05)), I((x0 + x1) // 2, 160, '≈ 10 BILLION SUNS', 24, (255, 200, 140), fadein(u, 0.1), w='Medium'),
+              I((x0 + x1) // 2, 610, 'TENS OF SUNS OF GAS PER YEAR  (ROUGH ESTIMATE)', 22, GR, fadein(u, 0.15), w='Medium'),
+              I(900, 150, 'TIME', 26, GR, fadein(u, 0.2), w='Medium'), I(900, 210, f'{int(100 * drain)} MILLION YEARS', 44, GOLD, fadein(u, 0.2)),
+              I(900, 300, 'A BLINK, FOR A GALAXY', 30, WH, fadein(u, 0.75))]
+    rng = np.random.default_rng(6)
+    for i in range(120):
+        x = 740 + rng.random() * 400; y = 360 + rng.random() * 200
+        img = glowdot(img.copy(), x, y, 2.5, (0.8, 0.9, 1.0), 1.2) if i < 100 else img
+    items += [I(940, 610, 'THE 100 BILLION STARS ARE STILL THERE', 24, (170, 200, 255), fadein(u, 0.82), w='Medium')]
+    return overlay(vignette(img), items, caption=cap, tag='ROUGH ESTIMATE')
+def f_u23(t, T, tg, cap):
+    u = t / T
+    img = lens(BG * 0.5, 1000, 360, 100)
+    items = [I(500, 250, 'NOT A SWALLOWING.', 60, WH, fadein(u, 0.1), 'mm'), I(500, 380, 'AN ORBITAL CATASTROPHE.', 56, GOLD, fadein(u, 0.5), 'mm')]
+    return overlay(vignette(img), items, caption=cap, tag=TAG)
+def f_u24(t, T, tg, cap):
+    u = t / T
+    img = BG * 0.35; items = []
+    cx, cy = 640, 370
+    r = 150 * (1 - 0.93 * sm(A(u, 0.05, 0.85))) + 6
+    om = 2.0 * (150 / r) ** 1.5 * 0.35
+    ph = np.cumsum([0])[0] + 0
+    # integrate phase deterministically from u
+    uu = np.linspace(0, u, 80); rr = 150 * (1 - 0.93 * sm((uu - 0.05) / 0.8)) + 6
+    phase = float(np.sum(0.35 * 2.0 * (150 / rr) ** 1.5) * (u / 80) * T * 0.35)
+    x1 = cx + r * np.cos(phase); y1 = cy + r * 0.7 * np.sin(phase); x2 = cx - r * np.cos(phase); y2 = cy - r * 0.7 * np.sin(phase)
+    rng = np.random.default_rng(12)
+    for i in range(60):
+        a0 = rng.random() * 2 * np.pi; rad0 = 40 + rng.random() * 140; t_ej = 0.15 + rng.random() * 0.6
+        if u < t_ej:
+            ang = a0 + u * 3 * (150 / rad0) ** 1.0; rr_ = rad0
+        else:
+            k = (u - t_ej); ang = a0 + t_ej * 3 * (150 / rad0); rr_ = rad0 + 900 * k ** 1.3
+        img = glowdot(img.copy(), cx + rr_ * np.cos(ang), cy + rr_ * 0.75 * np.sin(ang), 2.5, (0.8, 0.9, 1.0), 1.2)
+    merged = u > 0.88
+    if not merged:
+        for (x, y, rad) in [(x1, y1, 12), (x2, y2, 10)]:
+            circ(img, x, y, rad, (0, 0, 0)); circ(img, x, y, rad * 1.3, (1.0, 0.6, 0.25), 2)
