@@ -538,3 +538,259 @@ def k_family(cv, t, T, u, P):
     return its
 def k_forcedev(cv, t, T, u, P):
     its = []; n = 200; x = np.linspace(0.12, 1, n); y = 1 / x ** 2 * 0.06
+    cv.line(np.stack([150 + x * 950, 600 - np.clip(y, 0, 1) * 430 * 2.2], 1), CYAN, 3, 1)
+    g = fin(u, 0.35, 0.7)
+    if P.get('dev', True):
+        yy = y * (1 + 2.5 * np.exp(-((x - 0.14) / 0.1) ** 2))
+        cv.line(np.stack([150 + x[:60] * 950, 600 - np.clip(yy[:60], 0, 1) * 430 * 2.2], 1), RED, 3, g * 0.8)
+        its.append(I(300, 200, 'WHAT LARGE EXTRA DIMENSIONS WOULD DO', 22, RED, g))
+    cv.line([(150, 600), (1120, 600)], GREY, 1, 0.5, 0)
+    its += [I(640, 90, 'IF EXTRA DIMENSIONS WERE LARGE, GRAVITY WOULD CHANGE AT SHORT DISTANCES', 28, WHITE, fin(u, 0, 0.2)), I(640, 650, 'DISTANCE', 20, GREY, 0.8, 'Medium')]
+    return its
+def k_lab(cv, t, T, u, P):
+    its = []; n = 200; x = np.linspace(0.12, 1, n); y = 1 / x ** 2 * 0.06
+    cv.line(np.stack([150 + x * 950, 600 - np.clip(y, 0, 1) * 430 * 2.2], 1), CYAN, 3, 1)
+    g = fin(u, 0.2, 0.55)
+    cv.poly([(150, 130), (150 + 950 * 0.45 * g, 130), (150 + 950 * 0.45 * g, 600), (150, 600)], GREEN, 0.15)
+    its += [I(640, 90, 'GRAVITY MEASURED DOWN TO A FEW HUNDREDTHS OF A MILLIMETER', 30, WHITE, fin(u, 0, 0.2)), I(380, 380, 'TESTED · NO DEVIATION FROM NEWTON', 26, GREEN, g), I(640, 650, 'DISTANCE', 20, GREY, 0.8, 'Medium')]
+    return its
+def k_lhcring(cv, t, T, u, P):
+    its = []; cv.ring(640, 360, 230, (140, 180, 255), 3, 0.8)
+    for k in range(2):
+        a_ = t * (2.5 if k else -2.5); cv.dot(640 + 230 * math.cos(a_), 360 + 230 * math.sin(a_), 6, [GOLD, CYAN][k], 1, 1)
+    if int(t * 3) % 3 == 0: cv.blob(640 + 230, 360, 20, WHITE, 0.8)
+    its += [I(640, 360, 'LARGE HADRON COLLIDER', 30, WHITE, fin(u, 0.1, 0.3)), I(640, 90, 'SEARCHES FOR EXTRA DIMENSIONS', 38, WHITE, fin(u, 0, 0.2)), I(640, 640, 'NO SIGNS FOUND', 36, RED, fin(u, 0.5, 0.75))]
+    return its
+def k_search(cv, t, T, u, P):
+    """left: tested range, right: untouched; for 'ruleout'"""
+    its = []; a1 = fin(u, 0.05, 0.3); a2 = fin(u, 0.35, 0.6); a3 = fin(u, 0.65, 0.9)
+    cv.poly([(120, 300), (560, 300), (560, 460), (120, 460)], GREEN, 0.25 * a1); its.append(I(340, 380, 'SOME SCENARIOS RULED OUT', 26, GREEN, a1))
+    cv.poly([(700, 300), (1160, 300), (1160, 460), (700, 460)], GOLD, 0.2 * a2); its.append(I(930, 380, 'TINY DIMENSIONS NEAR THE STRING SCALE', 24, GOLD, a2)); its.append(I(930, 420, 'FAR BEYOND REACH', 22, WHITE, a2, 'Medium'))
+    its.append(I(640, 150, 'WHAT THE RESULTS SAY', 40, WHITE, fin(u, 0, 0.2)))
+    its.append(I(640, 600, 'A REQUIREMENT OF THE MATHEMATICS · NOT A DISCOVERY OF NATURE', 30, RED if False else WHITE, a3))
+    return its
+def k_sparticles(cv, t, T, u, P):
+    its = []; names = ['ELECTRON', 'QUARK', 'PHOTON']; pn = ['SELECTRON', 'SQUARK', 'PHOTINO']
+    for i, (a_, b_) in enumerate(zip(names, pn)):
+        y = 220 + i * 120; a = fin(u, 0.05 + i * 0.1, 0.25 + i * 0.1)
+        its.append(I(300, y, a_, 28, CYAN, a)); cv.dot(430, y, 10, CYAN, a, 1); cv.line([(445, y), (700, y)], GREY, 1, a * 0.6, 0)
+        g = fin(u, 0.4 + i * 0.1, 0.6 + i * 0.1)
+        its.append(I(860, y, b_ + '  ?', 28, GOLD, g)); cv.dot(780, y, 10, GOLD, g * (0.4 + 0.4 * math.sin(t * 3 + i)), 1)
+    its += [I(640, 90, 'SUPERSYMMETRY · EVERY KNOWN PARTICLE GETS A HEAVIER PARTNER', 30, WHITE, fin(u, 0, 0.2)), I(640, 620, 'NO SUCH PARTNERS FOUND SO FAR', 36, RED, fin(u, 0.7, 0.9))]
+    return its
+def k_sky(cv, t, T, u, P):
+    its = []; r = np.random.default_rng(8)
+    xs = r.random(90) * 1100 + 90; ys = r.random(90) * 440 + 130
+    for x, y in zip(xs, ys): cv.dot(x, y, 2, WHITE, 0.6, 0.4)
+    scan = A(u, 0.1, 0.8); sx = 90 + 1100 * scan
+    cv.line([(sx, 120), (sx, 600)], CYAN, 2, 0.6, 0.6)
+    if P.get('cmb'):
+        for k in range(40): cv.blob(r.random() * 1100 + 90, r.random() * 440 + 130, 30 + r.random() * 30, (255, 150, 90) if k % 2 else (90, 130, 255), 0.18)
+        txt = 'FAINT PATTERNS IN THE COSMIC MICROWAVE BACKGROUND · AND GRAVITATIONAL WAVES'
+        end = 'NO EVIDENCE FOR STRING THEORY'
+    else:
+        txt = 'SEARCHING THE SKY FOR COSMIC STRINGS'; end = 'NONE FOUND'
+    its += [I(640, 80, txt, 28, WHITE, fin(u, 0, 0.2)), I(640, 650, end, 38, RED, fin(u, 0.75, 0.95))]
+    return its
+def k_shapes(cv, t, T, u, P):
+    its = []
+    for i in range(8):
+        cx = 220 + (i % 4) * 280; cy = 230 + (i // 4) * 260; a = fin(u, 0.05 + i * 0.07, 0.2 + i * 0.07)
+        draw_cy(cv, t + i, [3, 4, 5, 6][i % 4], 105, cx, cy, a=0.9 * a, c=[(120, 200, 255), (255, 200, 120), (190, 150, 255), (140, 235, 170)][i % 4])
+    its.append(I(640, 60, 'DIFFERENT SHAPES · DIFFERENT WAYS OF THREADING FIELDS THROUGH THEM', 26, WHITE, fin(u, 0, 0.2)))
+    its.append(I(640, 660, 'DIFFERENT PARTICLES · FORCES · CONSTANTS OF NATURE', 28, GOLD, fin(u, 0.7, 0.9)))
+    return its
+def land_height(x, y, t=0):
+    return (np.sin(x * 3.1) * np.cos(y * 2.7) + 0.6 * np.sin(x * 7.3 + y * 5.1) + 0.4 * np.cos(y * 9.1 - x * 4.2)) * 0.5
+def k_land(cv, t, T, u, P):
+    its = []; n = 46
+    xs = np.linspace(-1.4, 1.4, n)
+    rot = 0.25 * math.sin(t * 0.15)
+    def P3(x, y):
+        h = land_height(x, y) * 0.45
+        return np.array([x, h + 0.25, y])
+    for j in range(n):
+        pts = np.array([P3(x, xs[j]) for x in xs]); pp, z = project(pts, 0.85 + rot, 0.0, f=680, d=3.6, cx=640, cy=330)
+        cv.line(pp, (90, 150, 255), 1, 0.65, 0.3)
+    for j in range(0, n, 2):
+        pts = np.array([P3(xs[j], y) for y in xs]); pp, z = project(pts, 0.85 + rot, 0.0, f=680, d=3.6, cx=640, cy=330)
+        cv.line(pp, (90, 150, 255), 1, 0.4, 0.2)
+    r = np.random.default_rng(9)
+    lit = int(fin(u, 0.2, 0.9) * 50)
+    for k in range(lit):
+        x = r.uniform(-1.3, 1.3); y = r.uniform(-1.3, 1.3); p, z = project(P3(x, y)[None], 0.85 + rot, 0.0, f=680, d=3.6, cx=640, cy=330)
+        cv.dot(p[0][0], p[0][1], 3, GOLD, 0.9, 1)
+    its += [I(640, 70, P.get('title', 'THE STRING LANDSCAPE'), 44, WHITE, fin(u, 0, 0.15))]
+    if P.get('num'): its += [I(640, 600, '≈ 10^500', 80, GOLD, fin(u, 0.4, 0.65)), I(640, 665, 'A ROUGH ESTIMATE · NOT A PRECISE COUNT', 24, WHITE, fin(u, 0.6, 0.85), 'Medium')]
+    if P.get('sub'): its.append(I(640, 640, P['sub'], 30, GOLD, fin(u, 0.4, 0.7)))
+    return its
+def k_cols2(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.05, 0.3); a2 = fin(u, 0.4, 0.65)
+    cv.line([(640, 130), (640, 600)], GREY, 1, 0.5, 0)
+    its += [I(340, 170, 'CRITICS', 38, RED, a1), I(340, 300, 'HARD TO FALSIFY', 30, WHITE, a1), I(340, 360, 'NO SHARP PREDICTIONS', 30, WHITE, a1), I(340, 420, 'DRIFTING AWAY FROM SCIENCE?', 26, GREY, a1, 'Medium'),
+            I(940, 170, 'SUPPORTERS', 38, GREEN, a2), I(940, 300, 'THE LANDSCAPE IS A RESULT', 28, WHITE, a2), I(940, 360, 'THE SWAMPLAND PROGRAM', 28, WHITE, a2), I(940, 420, 'RULES THAT COULD BE TESTED', 26, GREY, a2, 'Medium')]
+    its.append(I(640, 640, 'SERIOUS PHYSICISTS STAND ON BOTH SIDES', 30, GOLD, fin(u, 0.75, 0.95)))
+    return its
+def k_checks(cv, t, T, u, P):
+    its = []; which = P.get('which', [0, 1, 2])
+    rows = [('1', 'IS THE MATHEMATICS INTERNALLY CONSISTENT?', 'LARGELY YES · THE FULL THEORY IS UNFINISHED', GREEN, 'YES'), ('2', 'IS THE FRAMEWORK USEFUL?', 'YES · REAL INSIGHT INTO GRAVITY AND MATHEMATICS', GREEN, 'YES'), ('3', 'DOES NATURE ACTUALLY BEHAVE THIS WAY?', 'COMPLETELY OPEN', GOLD, '?')]
+    for j, i in enumerate(which):
+        n_, q, ans, c, ck = rows[i]; y = 230 + i * 150 if len(which) > 1 else 330
+        a = fin(u, 0.05 + j * 0.2, 0.25 + j * 0.2); b = fin(u, 0.3 + j * 0.2, 0.5 + j * 0.2)
+        its += [I(180, y, n_, 70, c, a), I(250, y - 22, q, 28, WHITE, a, an='lm'), I(250, y + 28, ans, 24, c, b, 'Medium', 'lm'), I(1150, y, ck, 70, c, b)]
+    return its
+def k_balance(cv, t, T, u, P):
+    its = []; a = fin(u, 0.1, 0.4); tilt = 0.18 * sm(A(u, 0.4, 0.8))
+    cv.line([(340, 400 - 50 * tilt / 0.18), (940, 400 + 50 * tilt / 0.18)], WHITE, 3, 1)
+    cv.dot(640, 400, 10, WHITE, 1, 1)
+    its += [I(340, 330 - 50 * tilt / 0.18, 'MATHEMATICAL BEAUTY', 30, GOLD, a), I(940, 330 + 50 * tilt / 0.18, 'EMPIRICAL EVIDENCE', 30, CYAN, a),
+            I(640, 150, 'NOT INTERCHANGEABLE', 44, WHITE, fin(u, 0.0, 0.2)), I(640, 600, 'A REASON TO EXPLORE · NEVER BY ITSELF EVIDENCE', 28, WHITE, fin(u, 0.55, 0.8))]
+    return its
+def horizon(cv, cx, cy, R, t, cells=0, flick=False, a=1.0):
+    th = np.linspace(0, 6.283, 120)
+    cv.ring(cx, cy, R, (255, 190, 110), 3, a)
+    cv.blob(cx, cy, R * 0.9, (20, 20, 30), 0.0)
+    cv.poly([(cx + R * math.cos(x), cy + R * math.sin(x)) for x in th], (5, 5, 10), 0.95)
+    r = np.random.default_rng(12)
+    for k in range(cells):
+        ph = r.random() * 6.283; ps = r.random() * 3.1416; x = cx + R * math.sin(ps) * math.cos(ph + t * 0.2); y = cy - R * math.cos(ps)
+        on = (math.sin(t * 4 + k) > 0) if flick else True
+        cv.dot(x, y, 3, GOLD if on else (80, 80, 100), a * 0.9, 0.6)
+def k_bh(cv, t, T, u, P):
+    its = []
+    img = lens((BG * 0.8).copy(), 640, 360, 130 + 4 * math.sin(t)); cv.im = np.clip(cv.im + img, 0, 1)
+    its += [I(640, 100, P.get('title', 'BLACK HOLES'), 46, WHITE, fin(u, 0, 0.2)), I(640, 640, P.get('sub', ''), 30, GOLD, fin(u, 0.4, 0.7))]
+    return its
+def k_entropy(cv, t, T, u, P):
+    its = []; g = fin(u, 0.1, 0.5)
+    horizon(cv, 640, 360, 170, t, cells=int(260 * g))
+    its += [I(640, 90, 'BLACK HOLE ENTROPY', 46, WHITE, fin(u, 0, 0.2)), I(640, 600, 'PROPORTIONAL TO THE AREA OF THE HORIZON · NOT THE VOLUME', 28, GOLD, fin(u, 0.5, 0.8)), I(1000, 360, 'S ~ A', 70, CYAN, fin(u, 0.4, 0.7))]
+    return its
+def k_micro(cv, t, T, u, P):
+    its = []
+    horizon(cv, 640, 360, 190, t, cells=360, flick=True)
+    its += [I(640, 90, 'HIDDEN MICROSCOPIC ARRANGEMENTS', 40, WHITE, fin(u, 0, 0.2)), I(640, 620, 'AN ASTRONOMICAL NUMBER OF INTERNAL QUANTUM STATES', 28, GOLD, fin(u, 0.45, 0.75)), I(1040, 360, 'WHAT ARE THEY?', 34, RED, fin(u, 0.7, 0.9))]
+    return its
+def k_count(cv, t, T, u, P):
+    its = []
+    horizon(cv, 340, 360, 130, t, cells=int(150 * fin(u, 0.1, 0.4)), flick=True)
+    for i in range(4): string_loop(cv, 880, 250 + i * 70, 40, 2 + i, t, 0.2, [CYAN, GOLD, VIOLET, GREEN][i], 2, a=fin(u, 0.2 + i * 0.08, 0.4 + i * 0.08))
+    g = fin(u, 0.65, 0.9)
+    its += [I(340, 560, 'BEKENSTEIN-HAWKING', 26, GOLD, fin(u, 0.1, 0.3)), I(880, 560, 'COUNT THE STRING STATES', 26, CYAN, fin(u, 0.3, 0.5)), I(640, 360, '=', 80, WHITE, g), I(640, 100, 'STROMINGER AND VAFA · NINETEEN NINETY-SIX', 34, WHITE, fin(u, 0, 0.2)), I(640, 650, 'AN EXACT MATCH · FOR A SPECIAL CLASS OF IDEALIZED BLACK HOLES', 26, GOLD, g)]
+    return its
+def k_region(cv, t, T, u, P):
+    its = []; g = fin(u, 0.15, 0.6)
+    s = 150 + 70 * math.sin(t * 0.6)
+    cv.line([(640 - s, 360 - s), (640 + s, 360 - s), (640 + s, 360 + s), (640 - s, 360 + s), (640 - s, 360 - s)], CYAN, 3, 1)
+    for k in range(int(80 * g)):
+        r = np.random.default_rng(k);
+        x = 640 + (r.random() * 2 - 1) * s * 0.9; y = 360 + (r.random() * 2 - 1) * s * 0.9; cv.dot(x, y, 2, WHITE, 0.4, 0.2)
+    for k in range(int(48 * g)):
+        a_ = k / 48 * 4; side = int(a_) % 4; f = a_ - int(a_)
+        pts = [(640 - s + 2 * s * f, 360 - s), (640 + s, 360 - s + 2 * s * f), (640 + s - 2 * s * f, 360 + s), (640 - s, 360 + s - 2 * s * f)][side]
+        cv.dot(pts[0], pts[1], 4, GOLD, 1, 1)
+    its += [I(640, 90, 'THE MAXIMUM INFORMATION A REGION CAN HOLD', 36, WHITE, fin(u, 0, 0.2)), I(640, 620, 'SCALES WITH THE AREA OF ITS BOUNDARY · NOT ITS VOLUME', 28, GOLD, fin(u, 0.55, 0.8))]
+    return its
+def k_ads(cv, t, T, u, P):
+    its = []; R = 250; cx, cy = 640, 360
+    cv.ring(cx, cy, R, WHITE, 2, 0.9)
+    r = np.random.default_rng(21)
+    angs = np.sort(r.random(14) * 6.283)
+    g = fin(u, 0.15, 0.6)
+    for i in range(len(angs)):
+        a, b = angs[i], angs[(i + 3) % len(angs)]
+        pts = poincare_geodesic(a, b, R, cx, cy); m = max(2, int(len(pts) * g)); cv.line(pts[:m], (110, 170, 255), 1, 0.7, 0.4)
+    for k, a in enumerate(angs):
+        bx = cx + R * math.cos(a); by = cy + R * math.sin(a); f = 0.5 + 0.5 * math.sin(t * 2 + k)
+        cv.dot(bx, by, 4 + 3 * f, GOLD, 1, 1)
+    cv.blob(cx, cy, 14 + 4 * math.sin(t * 2), (140, 200, 255), 0.7)
+    its += [I(640, 70, 'A UNIVERSE WITH GRAVITY · ANTI-DE SITTER SPACE', 30, CYAN, fin(u, 0.1, 0.3)), I(640, 660, 'A QUANTUM THEORY WITHOUT GRAVITY · LIVING ON THE BOUNDARY', 26, GOLD, fin(u, 0.45, 0.7))]
+    return its
+def k_dict(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.05, 0.25); a2 = fin(u, 0.2, 0.4); a3 = fin(u, 0.5, 0.75)
+    R = 140
+    cv.ring(340, 330, R, WHITE, 2, a1)
+    for i, ang in enumerate(np.linspace(0, 6.283, 9)[:-1]): cv.line([poincare_geodesic(ang, ang + 2.2, R, 340, 330)[k] for k in range(60)], (110, 170, 255), 1, a1 * 0.6, 0.3)
+    its += [I(340, 530, 'GRAVITY', 36, CYAN, a1), I(340, 580, 'STRING THEORY IN ANTI-DE SITTER SPACE', 20, WHITE, a1, 'Medium')]
+    cv.ring(940, 330, R, GOLD, 3, a2)
+    for k in range(40): a_ = k / 40 * 6.283; cv.dot(940 + R * math.cos(a_), 330 + R * math.sin(a_), 3 + 2 * math.sin(t * 3 + k), GOLD, a2, 1)
+    its += [I(940, 530, 'NO GRAVITY', 36, GOLD, a2), I(940, 580, 'QUANTUM FIELD THEORY · ONE FEWER DIMENSION', 20, WHITE, a2, 'Medium')]
+    cv.line([(500, 330), (780, 330)], WHITE, 3, a3); its.append(I(640, 290, 'TWO DESCRIPTIONS', 26, WHITE, a3)); its.append(I(640, 370, 'OF THE SAME PHYSICS', 26, WHITE, a3))
+    its.append(I(640, 80, 'THE A D S / C F T CORRESPONDENCE', 40, WHITE, fin(u, 0, 0.15)))
+    return its
+def k_holo(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.05, 0.3); a2 = fin(u, 0.5, 0.75)
+    # flat film left with 3D image
+    cv.poly([(130, 420), (520, 420), (560, 500), (90, 500)], (120, 160, 255), 0.4 * a1)
+    for k in range(50): cv.dot(230 + (k % 10) * 24, 440 + (k // 10) * 12, 2, CYAN, a1 * 0.7, 0.6)
+    cv.blob(325, 300, 50, GOLD, 0.8 * a1); its += [I(325, 560, 'A HOLOGRAM · A 3D IMAGE ON A FLAT SURFACE', 22, CYAN, a1)]
+    its.append(I(640, 100, 'USEFUL ANALOGY · RISKY ANALOGY', 40, WHITE, fin(u, 0, 0.2)))
+    its += [I(940, 360, 'BUT THE INTERIOR\nIS NOT AN ILLUSION', 34, GOLD, a2), I(940, 450, 'BOTH DESCRIPTIONS ARE EQUALLY REAL', 22, WHITE, a2, 'Medium')]
+    return its
+def k_dsads(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.05, 0.3); a2 = fin(u, 0.3, 0.55); a3 = fin(u, 0.6, 0.85)
+    cv.ring(330, 340, 140, CYAN, 2, a1)
+    its += [I(330, 540, 'ANTI-DE SITTER SPACE', 28, CYAN, a1), I(330, 580, 'NEGATIVELY CURVED · THE SETTING OF THE CORRESPONDENCE', 18, WHITE, a1, 'Medium')]
+    g = (t * 0.2) % 1
+    for k in range(6): cv.ring(950, 340, 30 + 130 * ((g + k / 6) % 1), GOLD, 1, (1 - ((g + k / 6) % 1)) * 0.6 * a2)
+    its += [I(950, 540, 'OUR UNIVERSE', 28, GOLD, a2), I(950, 580, 'EXPANDING · AND THE EXPANSION IS ACCELERATING', 18, WHITE, a2, 'Medium')]
+    its.append(I(640, 90, 'THE UNIVERSE WE LIVE IN IS NOT ANTI-DE SITTER SPACE', 34, WHITE, fin(u, 0, 0.2)))
+    its.append(I(640, 650, 'NO PROOF THAT WE LIVE IN A HOLOGRAM', 30, RED, a3))
+    return its
+def k_emerge(cv, t, T, u, P):
+    its = []; g = fin(u, 0.2, 0.8)
+    R = 220; cx, cy = 640, 360
+    cv.ring(cx, cy, R, GOLD, 3, 1)
+    for k in range(60): a_ = k / 60 * 6.283; cv.dot(cx + R * math.cos(a_), cy + R * math.sin(a_), 3 + 2 * math.sin(t * 2 + k * 0.7), GOLD, 1, 1)
+    r = np.random.default_rng(31); angs = np.sort(r.random(16) * 6.283)
+    for i in range(16):
+        pts = poincare_geodesic(angs[i], angs[(i + 5) % 16], R, cx, cy); m = max(2, int(len(pts) * g)); cv.line(pts[:m], (110, 170, 255), 1, 0.8 * g, 0.4)
+    its += [I(640, 70, 'GRAVITY AND SPACETIME EMERGING FROM A QUANTUM THEORY', 32, WHITE, fin(u, 0, 0.2)), I(640, 640, 'THAT CONTAINS NEITHER', 34, GOLD, fin(u, 0.6, 0.85))]
+    return its
+def k_tiers(cv, t, T, u, P):
+    its = []; tiers = [('ESTABLISHED RESULTS', 'THE MATHEMATICAL ONES', GREEN), ('THEORETICAL IMPLICATIONS', 'IF NATURE CHOSE STRINGS', GOLD), ('SPECULATION', 'THE HORIZON', VIOLET)]
+    for i, (a_, b_, c) in enumerate(tiers):
+        y = 220 + i * 140; a = fin(u, 0.1 + i * 0.22, 0.3 + i * 0.22)
+        cv.poly([(220, y - 48), (1060, y - 48), (1060, y + 48), (220, y + 48)], c, 0.18 * a)
+        its += [I(640, y - 10, a_, 32, c, a), I(640, y + 30, b_, 22, WHITE, a, 'Medium')]
+    return its
+def k_return(cv, t, T, u, P):
+    return k_zoom(cv, t, T, u, {'s0': 5, 's1': 0})
+def k_split(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.05, 0.3); a2 = fin(u, 0.4, 0.65)
+    cv.blob(330, 360, 24, WHITE, 0.9 * a1); cv.dot(330, 360, 6, WHITE, a1, 1)
+    string_loop(cv, 950, 360, 90, 4, t, 0.18, CYAN, 3, a=a2)
+    its += [I(330, 520, 'THE DOTS ARE REALLY DOTS', 30, WHITE, a1), I(330, 565, 'AND GRAVITY NEEDS ANOTHER SOLUTION', 22, GREY, a1, 'Medium'),
+            I(950, 520, 'TINY VIBRATING STRINGS', 30, CYAN, a2), I(950, 565, 'A HUNDRED BILLION BILLION TIMES SMALLER THAN A PROTON', 18, GREY, a2, 'Medium'), I(640, 360, 'OR', 36, GOLD, fin(u, 0.3, 0.5))]
+    return its
+def k_windows(cv, t, T, u, P):
+    its = []; names = ['A PREDICTION SHARP ENOUGH TO FAIL', 'A NEW WINDOW ONTO THE PLANCK SCALE', 'A SURPRISE NOBODY HAS IMAGINED']
+    sub = ['', 'THE EARLIEST LIGHT · THE RIPPLES OF COLLIDING BLACK HOLES', '']
+    for i, n_ in enumerate(names):
+        y = 220 + i * 140; a = fin(u, 0.1 + i * 0.22, 0.3 + i * 0.22)
+        cv.ring(190, y, 22, [GOLD, CYAN, VIOLET][i], 3, a); its.append(I(250, y, n_, 30, WHITE, a, an='lm'))
+        if sub[i]: its.append(I(250, y + 40, sub[i], 20, GREY, a, 'Medium', 'lm'))
+    its.append(I(640, 90, 'WHAT WOULD IT TAKE?', 44, GOLD, fin(u, 0, 0.2)))
+    return its
+def k_final(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.0, 0.2); a2 = fin(u, 0.25, 0.5); fade = 1 - fin(u, 0.82, 1.0)
+    cv.blob(330, 360, 24, WHITE, 0.9 * a1 * fade); cv.dot(330, 360, 6, WHITE, a1 * fade, 1)
+    string_open(cv, 700, 1150, 360, 3, t, 34, CYAN, 3, a=a2 * fade)
+    its += [I(330, 480, 'A DOT', 40, WHITE, a1 * fade), I(925, 480, 'A NOTE', 40, CYAN, a2 * fade)]
+    its.append(I(640, 140, 'THE UNIVERSE HAS ALREADY DECIDED', 36, GOLD, fin(u, 0.55, 0.75) * fade))
+    its.append(I(640, 620, 'WHAT WE LACK IS A WAY TO ASK', 42, WHITE, fin(u, 0.7, 0.9) * fade))
+    return its
+def k_matters(cv, t, T, u, P):
+    its = []; lines = ['GRAVITY AND QUANTUM MECHANICS CAN COEXIST', 'IN ONE CONSISTENT MATHEMATICAL FRAMEWORK', 'SPACETIME MAY BE BUILT FROM SOMETHING DEEPER']
+    BGS['string'](cv, t, u)
+    for i, ln in enumerate(lines): its.append(I(640, 250 + i * 90, ln, 34, [WHITE, WHITE, GOLD][i], fin(u, 0.1 + i * 0.22, 0.3 + i * 0.22)))
+    its.append(I(640, 100, 'STRING THEORY MATTERS EVEN IF IT IS NOT TRUE', 38, CYAN, fin(u, 0, 0.15)))
+    return its
+def k_nowhat(cv, t, T, u, P):
+    its = []
+    its.append(I(340, 330, 'MATHEMATICS', 44, CYAN, fin(u, 0.05, 0.25))); its.append(I(340, 400, 'WHAT COULD BE', 30, WHITE, fin(u, 0.1, 0.3)))
+    its.append(I(940, 330, 'NATURE', 44, GOLD, fin(u, 0.4, 0.6))); its.append(I(940, 400, 'WHAT IS', 30, WHITE, fin(u, 0.45, 0.65)))
+    string_loop(cv, 340, 540, 60, 3, t, 0.15, CYAN, 2, a=fin(u, 0.1, 0.3));
+    cv.dot(940, 540, 6, GOLD, fin(u, 0.4, 0.6), 1)
+    return its
+KINDS = {k[2:]: v for k, v in globals().items() if k.startswith('k_')}
