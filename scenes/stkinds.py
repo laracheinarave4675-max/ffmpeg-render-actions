@@ -268,3 +268,273 @@ def k_blowup(cv, t, T, u, P):
         cv.line(pts, RED, 4, 1)
         cv.dot(pts[-1][0], pts[-1][1], 8, WHITE, 1, 1)
     cv.line([(180, 600), (1100, 600)], GREY, 1, 0.6, 0); cv.line([(180, 600), (180, 110)], GREY, 1, 0.6, 0)
+    its += [I(640, 70, P.get('title', 'PUSH THE CALCULATION FURTHER...'), 36, WHITE, fin(u, 0, 0.15)), I(1060, 150, '∞', 90, RED, fin(u, 0.7, 0.9)),
+            I(640, 660, 'HIGHER PRECISION · HIGHER ENERGY', 24, GREY, fin(u, 0.1, 0.3), 'Medium')]
+    return its
+def k_renorm(cv, t, T, u, P):
+    its = []; n = 200
+    x = np.linspace(0, 1, n); g = sm(A(u, 0.1, 0.7))
+    m = int(n * g) + 2
+    # left: other forces converge
+    yl = 1 - np.exp(-x * 4)
+    cv.line(np.stack([140 + x[:m] * 420, 560 - yl[:m] * 300], 1), GREEN, 4, 1)
+    its += [I(350, 140, 'OTHER FORCES', 30, GREEN, fin(u, 0.05, 0.2)), I(350, 600, 'INFINITIES ABSORBED INTO A FEW MEASURED NUMBERS', 20, WHITE, fin(u, 0.4, 0.6), 'Medium')]
+    # right: gravity diverges
+    xr = x[:m] * 0.97; yr = np.clip(0.06 / (1.02 - xr) * 5.5, 0, 6) * 55
+    cv.line(np.stack([720 + xr * 420, 560 - np.clip(yr, 0, 440)], 1), RED, 4, 1)
+    its += [I(930, 140, 'GRAVITY', 30, RED, fin(u, 0.1, 0.25)), I(930, 600, 'THE INFINITIES KEEP MULTIPLYING', 20, WHITE, fin(u, 0.5, 0.7), 'Medium')]
+    cv.line([(640, 130), (640, 640)], GREY, 1, 0.4, 0)
+    if P.get('end'): its.append(I(640, 380, 'NO PREDICTIONS', 44, RED, fin(u, 0.8, 0.95)))
+    return its
+def k_vertex(cv, t, T, u, P):
+    its = []; a = fin(u, 0.1, 0.4)
+    for sgn in (-1, 1):
+        for yy in (-1, 1):
+            cv.line([(640 + sgn * 330, 360 + yy * 220), (640, 360)], CYAN if sgn < 0 else GOLD, 3, a)
+    cv.blob(640, 360, 18 + 8 * math.sin(t * 4), (255, 255, 255), a); cv.dot(640, 360, 9, WHITE, a, 1)
+    its += [I(640, 100, 'POINT PARTICLES · ONE POINT OF INTERACTION', 36, WHITE, fin(u, 0.0, 0.2)), I(640, 560, 'THAT IS WHERE THE INFINITIES ARISE', 30, RED, fin(u, 0.55, 0.8))]
+    return its
+def k_well(cv, t, T, u, P):
+    its = []; g = sm(A(u, 0.1, 0.9))
+    r = lerp(240, 18, g)
+    grid_well(cv, 640, 330, lerp(20, 190, g), t, a=0.7, sig=lerp(160, 60, g))
+    cv.ring(640, 330, r, GOLD, 3, 0.9); cv.blob(640, 330, max(r * 0.5, 8), (255, 220, 140), 0.8)
+    its += [I(640, 80, 'PACK ENERGY INTO A SMALLER REGION', 36, WHITE, fin(u, 0, 0.15)), I(640, 650, 'AND GRAVITY ITSELF GROWS STRONGER', 30, GOLD, fin(u, 0.55, 0.8))]
+    return its
+def k_others(cv, t, T, u, P):
+    its = []
+    cv.ring(640, 360, 90, WHITE, 2, 0.6 * fin(u, 0, 0.2))
+    its.append(I(640, 360, 'QUANTUM\nGRAVITY', 26, WHITE, fin(u, 0, 0.2)))
+    nodes = [(250, 220, 'LOOP QUANTUM GRAVITY', CYAN), (1030, 220, 'ASYMPTOTIC SAFETY', GREEN), (640, 590, 'STRING THEORY', GOLD)]
+    for i, (x, y, n_, c) in enumerate(nodes):
+        a = fin(u, 0.2 + i * 0.2, 0.4 + i * 0.2)
+        cv.line([(640, 360), (x, y)], c, 2, a * 0.6, 0.6); cv.blob(x, y, 28, c, 0.6 * a); cv.dot(x, y, 12, c, a, 1)
+        its.append(I(x, y + 46, n_, 26, c, a))
+    its.append(I(640, 660, 'NONE COMPLETED AND CONFIRMED', 24, WHITE, fin(u, 0.8, 0.95), 'Medium'))
+    return its
+def k_timeline(cv, t, T, u, P):
+    its = []; BGS[P.get('bg', 'none')](cv, t, u)
+    its.append(I(640, 230, P['year'], 120, GOLD, fin(u, 0.0, 0.2)))
+    for i, ln in enumerate(P['lines']):
+        its.append(I(640, 360 + i * 56, ln, P.get('s', 36), (WHITE if i == 0 else CYAN) if not P.get('cols') else P['cols'][i], fin(u, 0.2 + i * 0.15, 0.4 + i * 0.15)))
+    return its
+def k_amp(cv, t, T, u, P):
+    its = []; n = 400; x = np.linspace(0.02, 1, n)
+    y = np.abs(np.sin(x * 22) / (x * 22)) * 1.1 + 0.4 * np.exp(-((x - 0.5) / 0.1) ** 2)
+    m = int(n * sm(A(u, 0.05, 0.6))) + 2
+    cv.line(np.stack([140 + x[:m] * 1000, 560 - y[:m] * 330], 1), CYAN, 3, 1)
+    cv.line([(140, 560), (1140, 560)], GREY, 1, 0.5, 0)
+    its += [I(640, 100, 'NINETEEN SIXTY-EIGHT · A FORMULA FOR THE STRONG FORCE', 32, WHITE, fin(u, 0, 0.2)), I(640, 640, 'IT WORKED REMARKABLY WELL. NOBODY KNEW WHY.', 26, GOLD, fin(u, 0.55, 0.8))]
+    return its
+def k_morph(cv, t, T, u, P):
+    its = []; g = sm(A(u, 0.15, 0.7))
+    for i, (y, m_, c) in enumerate([(220, 2, CYAN), (360, 3, GOLD), (500, 5, VIOLET)]):
+        string_open(cv, 160, 1120, y, m_, t + i, 34 * g, c, 3, a=g)
+    its += [I(640, 100, 'NOT POINTS', 44, WHITE, fin(u, 0.3, 0.5)), I(640, 640, 'TINY, VIBRATING STRINGS', 40, GOLD, fin(u, 0.6, 0.85))]
+    return its
+def k_quad(cv, t, T, u, P):
+    its = []; ph = math.cos(t * 2.4)
+    rx = 120 * (1 + 0.45 * ph); ry = 120 * (1 - 0.45 * ph)
+    th = np.linspace(0, 6.283, 120)
+    cv.line(np.stack([640 + rx * np.cos(th), 340 + ry * np.sin(th)], 1), VIOLET, 3, 1)
+    for k in range(6):
+        a_ = k / 6 * 6.283 + t * 0.3; cv.dot(640 + (rx + 40) * math.cos(a_), 340 + (ry + 40) * math.sin(a_), 4, WHITE, 0.4, 0.5)
+    its += [I(640, 110, P.get('title', 'MASSLESS · SPIN TWO'), 44, WHITE, fin(u, 0, 0.2)), I(640, 580, P.get('sub', 'THE PROPERTIES EXPECTED OF THE GRAVITON'), 28, GOLD, fin(u, 0.4, 0.65))]
+    return its
+def k_vib(cv, t, T, u, P):
+    its = []; modes = P.get('modes', [1, 2, 3, 4])
+    n = len(modes); labs = P.get('labels', [''] * n)
+    for i, m_ in enumerate(modes):
+        y = 190 + i * (430 / max(n, 1)); a = fin(u, 0.05 + i * 0.12, 0.25 + i * 0.12)
+        c = [CYAN, GOLD, VIOLET, GREEN, RED][i % 5]
+        string_open(cv, 220, 1060, y, m_, t, 28, c, 3, a=a)
+        if labs[i]: its.append(I(1140, y, labs[i], 22, c, a, an='lm' if False else 'mm'))
+    its.insert(0, I(640, 80, P.get('title', 'DIFFERENT VIBRATIONS · DIFFERENT NOTES'), 38, WHITE, fin(u, 0, 0.15)))
+    if P.get('sub'): its.append(I(640, 660, P['sub'], 28, GOLD, fin(u, 0.6, 0.85)))
+    return its
+def k_two(cv, t, T, u, P):
+    its = []
+    for i, (y, m_, c, lab) in enumerate([(260, 2, CYAN, P.get('a', 'ELECTRON')), (470, 5, GOLD, P.get('b', 'QUARK'))]):
+        a = fin(u, 0.1 + i * 0.2, 0.3 + i * 0.2)
+        string_open(cv, 200, 1080, y, m_, t, 32, c, 3, a=a); its.append(I(640, y - 70, lab, 32, c, a))
+    its.append(I(640, 100, P.get('title', 'SAME STRING · DIFFERENT NOTES'), 40, WHITE, fin(u, 0.0, 0.15)))
+    its.append(I(640, 650, P.get('sub', ''), 28, GOLD, fin(u, 0.7, 0.9)))
+    return its
+def k_dotstring(cv, t, T, u, P):
+    its = []; g = sm(A(u, 0.15, 0.55))
+    # point expands into filament then closes: show both loop and open string side by side
+    r = lerp(3, 110, g)
+    cv.blob(640, 360, 26 * (1 - g) + 3, WHITE, 0.8 * (1 - g))
+    string_loop(cv, 400, 360, r, 3, t, 0.15, CYAN, 3, a=g); string_open(cv, 760, 760 + 2 * r, 360, 2, t, 24 * g, GOLD, 3, a=g)
+    its += [I(640, 110, P.get('title', 'A POINT BECOMES A STRING'), 44, WHITE, fin(u, 0, 0.2)), I(400, 560, 'CLOSED STRING · A LOOP', 26, CYAN, fin(u, 0.55, 0.75)), I(880, 560, 'OPEN STRING · TWO ENDS', 26, GOLD, fin(u, 0.65, 0.85))]
+    return its
+def k_ladder_string(cv, t, T, u, P):
+    its = []
+    # proton vs string size comparison
+    cv.ring(640, 360, 200, (255, 130, 120), 3, 0.9); its.append(I(640, 360, 'PROTON', 34, (255, 150, 140), 0.9))
+    g = fin(u, 0.4, 0.7)
+    cv.dot(640, 440, 2, GOLD, g, 1); cv.blob(640, 440, 8, GOLD, g)
+    cv.line([(660, 440), (760, 520)], GOLD, 1, g * 0.6, 0)
+    its += [I(840, 540, 'A STRING · NEAR THE PLANCK LENGTH', 24, GOLD, g), I(640, 120, 'ABOUT A HUNDRED BILLION BILLION TIMES SMALLER', 34, WHITE, fin(u, 0.1, 0.3)),
+            I(640, 650, 'IT WOULD LOOK LIKE A POINT TO ANY MACHINE WE HAVE BUILT', 26, WHITE, fin(u, 0.7, 0.9), 'Medium')]
+    return its
+def k_guitar(cv, t, T, u, P):
+    its = []; a1 = fin(u, 0.05, 0.25); a2 = fin(u, 0.4, 0.6)
+    string_open(cv, 140, 1140, 220, 2, t, 30, CYAN, 3, a=a1)
+    for k in range(40):
+        x = 140 + k * 25; cv.dot(x, 220 + 30 * math.sin(2 * math.pi * (x - 140) / 1000) * math.cos(1.3 * t), 4, (255, 170, 120), a1 * 0.9, 0.5)
+    its.append(I(640, 150, 'A GUITAR STRING · MADE OF MATTER', 28, (255, 190, 150), a1))
+    string_open(cv, 140, 1140, 480, 2, t, 30, GOLD, 4, a=a2)
+    its.append(I(640, 410, 'A FUNDAMENTAL STRING · NOT MADE OF ANYTHING MORE BASIC', 28, GOLD, a2))
+    its.append(I(640, 640, 'IT IS THE BASIC THING', 34, WHITE, fin(u, 0.7, 0.9)))
+    return its
+def k_tension(cv, t, T, u, P):
+    its = []
+    string_open(cv, 160, 1120, 360, 1, t, 22, GOLD, 5, a=1, speed=3)
+    cv.blob(640, 360, 120, (255, 200, 100), 0.35)
+    its += [I(640, 130, 'ITS VIBRATION IS A PATTERN IN HOW IT MOVES THROUGH SPACETIME', 28, WHITE, fin(u, 0.05, 0.25)), I(640, 600, 'TENSION · ALMOST UNIMAGINABLY HIGH', 36, GOLD, fin(u, 0.5, 0.75))]
+    return its
+def k_spectrum(cv, t, T, u, P):
+    its = []; heavy = P.get('heavy', False)
+    lv = [0, 1, 2, 3, 4, 5]
+    for i, l in enumerate(lv):
+        y = 560 - i * (70 if not heavy else 80)
+        a = fin(u, 0.05 + i * 0.1, 0.2 + i * 0.1)
+        c = GREEN if i == 0 else (GOLD if heavy else GREY)
+        string_open(cv, 180, 560, y, max(i, 1), t, 12 if i else 4, c, 2, a=a)
+        its.append(I(600, y, ['LIGHT OR MASSLESS · THE PARTICLES WE KNOW', 'NEAR THE PLANCK MASS', 'HEAVIER', 'HEAVIER', 'HEAVIER', 'HEAVIER'][i] if i < 2 else '', 20, c, a, an='lm'))
+    its.append(I(640, 80, P.get('title', 'THE VIBRATIONAL PATTERNS'), 38, WHITE, fin(u, 0, 0.15)))
+    if heavy: its.append(I(640, 650, 'FAR BEYOND ANYTHING A COLLIDER COULD CREATE', 28, RED, fin(u, 0.6, 0.85)))
+    else: its.append(I(640, 650, 'THE QUIETEST NOTES ON A VAST SCALE', 28, GOLD, fin(u, 0.6, 0.85)))
+    return its
+def k_brane(cv, t, T, u, P):
+    its = []
+    cv.poly([(180, 470), (1100, 470), (1180, 560), (100, 560)], (90, 140, 230), 0.35)
+    cv.line([(100, 560), (1180, 560), (1100, 470), (180, 470), (100, 560)], (140, 180, 255), 1, 0.7, 0.3)
+    for k in range(5):
+        x0 = 260 + k * 170; y0 = 515; ph = t * 1.8 + k
+        pts = []
+        for s in np.linspace(0, 1, 50): pts.append((x0 + 90 * s + 10 * math.sin(ph), y0 - 210 * math.sin(math.pi * s) * (0.7 + 0.3 * math.sin(ph + s * 3))))
+        cv.line(pts, CYAN, 3, fin(u, 0.1 + k * 0.08, 0.3 + k * 0.08)); cv.dot(x0 + 10 * math.sin(ph), y0, 6, CYAN, 1, 1); cv.dot(x0 + 90 + 10 * math.sin(ph), y0, 6, CYAN, 1, 1)
+    its += [I(640, 100, 'OPEN STRINGS · ENDS ATTACHED TO BRANES', 38, WHITE, fin(u, 0, 0.2)), I(640, 640, 'THEY CAN PRODUCE FORCE CARRIERS LIKE THE PHOTON', 28, GOLD, fin(u, 0.6, 0.85))]
+    return its
+def k_eq(cv, t, T, u, P):
+    its = []; string_loop(cv, 340, 360, 130, 2, t, 0.2, VIOLET, 3, tilt=0.8)
+    its += [I(340, 580, 'CLOSED STRING', 26, VIOLET, fin(u, 0.1, 0.3)), I(820, 330, 'CURVATURE = ENERGY', 54, GOLD, fin(u, 0.35, 0.6)), I(820, 430, "EINSTEIN'S GRAVITY AT LARGE DISTANCES", 26, WHITE, fin(u, 0.55, 0.8), 'Medium'),
+            I(640, 100, P.get('title', 'ANY CONSISTENT MASSLESS SPIN-TWO PARTICLE'), 36, WHITE, fin(u, 0, 0.2))]
+    return its
+def tube(cv, cx, y0, y1, r, t, c, a=1.0, rings=7, ax=0.35):
+    for k in range(rings):
+        y = lerp(y0, y1, k / (rings - 1)); th = np.linspace(0, 6.283, 60)
+        cv.line(np.stack([cx + r * np.cos(th), y + r * np.sin(th) * 0.28], 1), c, 1, a * 0.7, 0.3)
+    for k in range(10):
+        a_ = k / 10 * 6.283; cv.line([(cx + r * math.cos(a_), y0 + r * math.sin(a_) * 0.28), (cx + r * math.cos(a_), y1 + r * math.sin(a_) * 0.28)], c, 1, a * 0.35, 0.2)
+def k_worldsheet(cv, t, T, u, P):
+    its = []
+    g = fin(u, 0.1, 0.8)
+    # pair of pants: two tubes merge to one (side view wireframe)
+    n = 24
+    for side, cc in ((-1, CYAN), (1, GOLD)):
+        for k in range(12):
+            a_ = k / 12 * 6.283
+            pts = []
+            for s in np.linspace(0, 1, 60):
+                if s > g: break
+                x = 640 + side * 170 * (1 - sm(A(s, 0.0, 0.62))) ; rr = lerp(70, 110, sm(A(s, 0.45, 0.8)))
+                y = 140 + s * 420
+                pts.append((x + rr * math.cos(a_) * (1 if s < 0.5 else 1) * 0.55 * (side * 0 + 1), y + rr * math.sin(a_) * 0.28))
+            if len(pts) > 1: cv.line(pts, cc, 1, 0.55, 0.3)
+    for s in np.linspace(0.03, 0.97, 9):
+        if s > g: continue
+        for side, cc in ((-1, CYAN), (1, GOLD)):
+            x = 640 + side * 170 * (1 - sm(A(s, 0.0, 0.62))); rr = lerp(70, 110, sm(A(s, 0.45, 0.8))); y = 140 + s * 420
+            th = np.linspace(0, 6.283, 50); cv.line(np.stack([x + rr * 0.55 * np.cos(th), y + rr * np.sin(th) * 0.28 * 0.55], 1), cc, 2, 0.8, 0.5)
+    its += [I(640, 70, P.get('title', 'WHEN STRINGS INTERACT'), 38, WHITE, fin(u, 0, 0.15)), I(640, 650, 'THE HISTORY OF THE PROCESS IS A SMOOTH SURFACE · NO SHARP POINT', 26, GOLD, fin(u, 0.6, 0.85))]
+    return its
+def k_web(cv, t, T, u, P):
+    its = []; nodes = P['nodes']; n = len(nodes)
+    cv.blob(640, 390, 40, GOLD, 0.8 * fin(u, 0.4, 0.7)); cv.dot(640, 390, 14, GOLD, fin(u, 0.4, 0.7), 1)
+    for i, (nm, c) in enumerate(nodes):
+        a = fin(u, 0.05 + i * 0.1, 0.25 + i * 0.1); ang = i / n * 6.283 - 1.57
+        g = sm(A(u, 0.45, 0.85))
+        x = 640 + lerp(1.0, 0.0 if P.get('merge') else 1.0, g) * 340 * math.cos(ang); y = 390 + lerp(1.0, 0.0 if P.get('merge') else 1.0, g) * 175 * math.sin(ang)
+        cv.dot(x, y, 12, c, a, 1); cv.line([(x, y), (640, 390)], c, 2, a * 0.5, 0.4)
+        its.append(I(640 + 340 * math.cos(ang), 390 + 175 * math.sin(ang) + (30 if math.sin(ang) > 0.3 else -30), nm, 22, c, a))
+    its.append(I(640, 90 if not P.get('top') else 60, P.get('title', ''), 36, WHITE, fin(u, 0, 0.15)))
+    its.append(I(640, 470, P.get('center', ''), 28, WHITE, fin(u, 0.7, 0.9)))
+    return its
+def k_dims(cv, t, T, u, P):
+    its = []
+    a1, a2, a3 = fin(u, 0.05, 0.25), fin(u, 0.3, 0.5), fin(u, 0.55, 0.75)
+    cv.line([(110, 360), (110 + 330 * a1, 360)], CYAN, 4, 1); cv.dot(110 + 330 * a1, 360, 8, CYAN, a1)
+    its += [I(275, 480, '1 NUMBER', 30, CYAN, a1), I(275, 440, 'A LINE', 22, WHITE, a1, 'Medium')]
+    cv.line([(520, 460), (520 + 250 * a2, 460)], GOLD, 3, a2); cv.line([(520, 460), (520, 460 - 200 * a2)], GOLD, 3, a2)
+    its += [I(645, 560, '2 NUMBERS', 30, GOLD, a2), I(645, 520, 'A PLANE', 22, WHITE, a2, 'Medium')]
+    cv.line([(860, 480), (860 + 250 * a3, 480)], VIOLET, 3, a3); cv.line([(860, 480), (860, 480 - 200 * a3)], VIOLET, 3, a3); cv.line([(860, 480), (860 + 110 * a3, 480 - 90 * a3)], VIOLET, 3, a3)
+    its += [I(985, 580, '3 NUMBERS', 30, VIOLET, a3), I(985, 540, 'SPACE', 22, WHITE, a3, 'Medium')]
+    its.append(I(640, 110, P.get('title', 'A DIMENSION IS AN INDEPENDENT DIRECTION'), 38, WHITE, fin(u, 0, 0.15)))
+    return its
+def k_cable(cv, t, T, u, P):
+    its = []; z = sm(A(u, 0.15, 0.85)) if P.get('zoom') else 0.0
+    ry = lerp(2, 120, z)
+    # cable from left to right, thickness grows as we zoom
+    for k in range(12):
+        a_ = k / 12 * 6.283; yy = 360 + ry * math.sin(a_)
+        cv.line([(60, yy), (1220, yy)], (150, 170, 210), 1, 0.3 + 0.4 * z, 0.3)
+    for s in np.linspace(0, 1, 9):
+        x = 80 + s * 1120; th = np.linspace(0, 6.283, 40); cv.line(np.stack([x + 0.3 * ry * np.cos(th) * 0.5, 360 + ry * np.sin(th)], 1), (170, 190, 230), 1, 0.35 * z, 0.2)
+    cv.line([(60, 360), (1220, 360)], WHITE, max(1, int(3 * (1 - z))), 0.9 * (1 - z) + 0.2)
+    if z > 0.6 and P.get('ant'):
+        ph = t * 0.4; x = 200 + (ph % 1) * 700; cv.dot(x, 360 - ry - 8, 10, GOLD, 1, 1)
+    its.append(I(640, 110, P.get('title', 'A THIN CABLE ACROSS A CANYON'), 40, WHITE, fin(u, 0.0, 0.2)))
+    its.append(I(640, 640, P.get('sub', 'FROM FAR AWAY: A LINE · ONE NUMBER'), 28, GOLD, fin(u, 0.4, 0.7)))
+    return its
+def k_ant(cv, t, T, u, P):
+    its = []
+    R = 130; cx = 640
+    for k in range(9):
+        x = 180 + k * 115; th = np.linspace(0, 6.283, 60)
+        cv.line(np.stack([x + 16 * np.cos(th), 360 + R * np.sin(th)], 1), (150, 190, 255), 1, 0.45, 0.2)
+    cv.line([(150, 360 - R), (1130, 360 - R)], (150, 190, 255), 2, 0.7, 0.2); cv.line([(150, 360 + R), (1130, 360 + R)], (150, 190, 255), 2, 0.7, 0.2)
+    ph = t * 0.5; mode = fin(u, 0.35, 0.5)
+    x = 260 + 700 * ((ph) % 1); yy = 360 - R
+    around = fin(u, 0.4, 0.55)
+    ang = t * 2.2
+    ay = 360 - R * math.cos(ang) * around if around > 0 else 360 - R
+    ax_ = 640 + 0 * mode
+    xx = 200 + 800 * (0.5 + 0.5 * math.sin(t * 0.4))
+    cv.dot(xx, 360 - R * math.cos(ang * around) , 10, GOLD, 1, 1)
+    its += [I(640, 100, 'FOR THE ANT THERE ARE TWO DIRECTIONS', 40, WHITE, fin(u, 0, 0.15)), I(300, 600, 'ALONG THE CABLE', 28, CYAN, fin(u, 0.2, 0.4)), I(980, 600, 'AROUND IT · A TINY CIRCLE', 28, GOLD, fin(u, 0.55, 0.75))]
+    return its
+def k_compact(cv, t, T, u, P):
+    its = []; g = fin(u, 0.1, 0.5)
+    for gx in range(-6, 7):
+        for gy in range(-3, 4):
+            x = 640 + gx * 90; y = 330 + gy * 80
+            cv.dot(x, y, 2, WHITE, 0.5, 0.2)
+            cv.ring(x, y, 11 * g, VIOLET, 1, 0.9 * g, 0.5)
+    its += [I(640, 90, 'COMPACTIFICATION', 42, WHITE, fin(u, 0, 0.15)), I(640, 640, 'A HIDDEN SPACE ATTACHED TO EVERY LOCATION', 30, GOLD, fin(u, 0.5, 0.75))]
+    return its
+def k_cy(cv, t, T, u, P):
+    its = []; draw_cy(cv, t, P.get('n', 5), 360, 640, 360, a=1.0)
+    its.append(I(640, 80, P.get('title', 'A SIX-DIMENSIONAL SHAPE · CALABI-YAU'), 38, WHITE, fin(u, 0, 0.2)))
+    its.append(I(640, 660, P.get('sub', 'A TWO-DIMENSIONAL SLICE · ARTIST-STYLE PROJECTION'), 22, GREY, fin(u, 0.3, 0.5), 'Medium'))
+    return its
+def k_trumpet(cv, t, T, u, P):
+    its = []
+    top = [(150, 330), (500, 330), (780, 300), (1000, 240), (1130, 150)]
+    bot = [(150, 390), (500, 390), (780, 420), (1000, 480), (1130, 570)]
+    cv.line(top, (210, 170, 90), 4, 1); cv.line(bot, (210, 170, 90), 4, 1)
+    for i in range(4):
+        ph = (t * 0.6 + i * 0.25) % 1; x = 160 + ph * 950
+        h = 24 + 80 * ((x - 400) / 700 if x > 400 else 0); cv.ring(x, 360, h, GOLD, 1, (1 - ph) * 0.6)
+    its += [I(640, 90, 'THE SHAPE OF A TRUMPET DECIDES WHICH NOTES IT CAN PLAY', 32, WHITE, fin(u, 0.0, 0.2)), I(640, 640, 'THE SHAPE OF THE HIDDEN DIMENSIONS WOULD DECIDE WHICH VIBRATIONS ARE ALLOWED', 24, GOLD, fin(u, 0.5, 0.8))]
+    return its
+def k_family(cv, t, T, u, P):
+    its = []; draw_cy(cv, t, 5, 230, 360, 360, a=0.9)
+    rows = ['WHICH PARTICLES EXIST', 'HOW MANY FAMILIES', 'HOW STRONG THE FORCES ACT']
+    for i, r_ in enumerate(rows): its.append(I(900, 250 + i * 90, r_, 28, [CYAN, GOLD, VIOLET][i], fin(u, 0.15 + i * 0.2, 0.35 + i * 0.2)))
+    its.append(I(640, 660, 'THE GEOMETRY OF THE INVISIBLE WRITES THE RULES OF THE VISIBLE', 28, WHITE, fin(u, 0.7, 0.9)))
+    return its
+def k_forcedev(cv, t, T, u, P):
+    its = []; n = 200; x = np.linspace(0.12, 1, n); y = 1 / x ** 2 * 0.06
