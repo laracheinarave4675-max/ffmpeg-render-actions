@@ -16,6 +16,11 @@ if __name__ == '__main__':
         subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'apply_patch.py')])
         subprocess.check_call(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:d=1:r=24', '-pix_fmt', 'yuv420p', out])
         sys.exit(0)
+    if sid == 'wprobe':  # one-time maintenance hook: probe rendered files on Drive, then emit a 1s dummy clip
+        import subprocess
+        subprocess.check_call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'probe.py')])
+        subprocess.check_call(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:d=1:r=24', '-pix_fmt', 'yuv420p', out])
+        sys.exit(0)
     if sid[0] not in MODS:
         sys.exit('unknown scene ' + sid)
     if sid[0] == 'w':  # vertical 9:16 short scenes are drawn at 720x1280
