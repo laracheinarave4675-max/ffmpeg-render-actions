@@ -138,3 +138,73 @@ def w06(t, T, tg, cap):
     its = [badge("ARTIST'S CONCEPT"), I(CX, H * 0.13, "GAS FALLS IN", 52, AMB, fin(u, 0.05, 0.2)), I(CX, H * 0.13 + 52, "ENERGY POURS OUT", 40, WHITE, fin(u, 0.15, 0.3), 'Medium'),
            I(CX, H * 0.80, "THE COCOON ABSORBS THE LIGHT", 30, WHITE, fin(u, 0.45, 0.6), 'Medium'), I(CX, H * 0.80 + 50, "AND GLOWS RED", 52, RED, fin(u, 0.55, 0.72))]
     return frame(c, its)
+
+# ---- w07: title ----
+def w07(t, T, tg, cap):
+    u = t / T
+    c = cvz(1 + 0.1 * u, dim=0.4)
+    x, y = CX, H * 0.38; R = 200 * (1 + 0.25 * (1 - fin(u, 0, 0.35)) ** 2)
+    c.blob(x, y, R * 0.8, (255, 60, 40), 0.30)
+    disk(c, x, y, R, (255, 190, 110), (210, 45, 28), 0.9)
+    disk(c, x, y, R * 0.08, (0, 0, 0), (0, 0, 0), 1.0, 0.2); c.ring(x, y, R * 0.12, GOLD, 3, 0.9, 1.0)
+    img = np.clip(c.out() + max(0, 1 - u / 0.12) * 0.5, 0, 1)
+    a = fin(u, 0.05, 0.3)
+    its = [badge("ARTIST'S CONCEPT"), I(CX, H * 0.66 + (1 - a) * 20, "BLACK HOLE", 92, WHITE, a), I(CX, H * 0.66 + 112, "STAR", 140, GOLD, fin(u, 0.2, 0.45)),
+           I(CX, H * 0.66 + 215, "A PROPOSED NEW TYPE OF OBJECT", 26, GREY, fin(u, 0.45, 0.7), 'Medium')]
+    return frame(img, its)
+
+# ---- w08: scale ----
+AU = [(0.72, "V"), (1.0, "E"), (1.52, "M"), (5.2, "J"), (9.5, "S"), (19.2, "U"), (30.1, "N")]
+def w08(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.35)
+    x, y = CX, H * 0.47; k = 10.0
+    env = 300 * sm(A(u, 0.15, 0.5))
+    if env > 4:
+        disk(c, x, y, env, (255, 120, 70), (190, 40, 25), 0.38, 0.10); c.blob(x, y, env * 0.6, (255, 60, 40), 0.22)
+    ro = fin(u, 0.05, 0.3)
+    for au, _ in AU:
+        c.ring(x, y, au * k, CYAN, 1, 0.55 * ro, 0.2)
+        a_ = tg * 0.9 / au ** 1.5 + au
+        c.dot(x + au * k * math.cos(a_), y + au * k * math.sin(a_), 3 if au < 10 else 5, (190, 225, 255), ro, 0.6)
+    c.blob(x, y, 14, (255, 220, 120), 0.9); c.dot(x, y, 5, (255, 240, 180))
+    its = [badge("SCHEMATIC · MODEL ESTIMATE"), I(CX, H * 0.13, "HOW BIG?", 56, WHITE, fin(u, 0.0, 0.15)),
+           I(CX, H * 0.86, "≈ SOLAR SYSTEM SCALE", 46, GOLD, fin(u, 0.5, 0.7)), I(CX, H * 0.86 + 46, "NEPTUNE'S ORBIT ≈ 30 AU", 24, GREY, fin(u, 0.6, 0.8), 'Medium'),
+           I(x + 18, y + 14, "SUN", 20, (255, 235, 170), ro, 'Medium', 'lm')]
+    return frame(c, its)
+
+# ---- w09: luminosity ----
+def w09(t, T, tg, cap):
+    u = t / T
+    c = cvz(1 + 0.05 * u, dim=0.4)
+    g = sm(u); x, y = CX, H * 0.28
+    c.blob(x, y, 80 + 70 * g, (255, 70, 45), 0.5); c.blob(x, y, 190 * g + 20, (255, 120, 70), 0.25)
+    disk(c, x, y, 36 + 26 * g, (255, 215, 160), (255, 90, 50), 0.95)
+    c.blob(110, y + 10, 14, (255, 225, 140), 0.8); c.dot(110, y + 10, 5, (255, 245, 190))
+    n = int(100 * sm(A(u, 0.1, 0.62)))
+    its = [badge("ARTIST'S CONCEPT"), I(110, y + 44, "OUR SUN", 20, GREY, fin(u, 0.1, 0.3), 'Medium'),
+           I(CX, H * 0.56, ">" + str(n), 190, GOLD, fin(u, 0.08, 0.25)), I(CX, H * 0.56 + 112, "BILLION ×", 64, WHITE, fin(u, 0.4, 0.6)),
+           I(CX, H * 0.56 + 172, "THE SUN'S LUMINOSITY", 32, GREY, fin(u, 0.55, 0.75), 'Medium')]
+    return frame(c, its)
+
+# ---- w10: mass (model dependent) ----
+def w10(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.35)
+    xa, xb2, y = 130, 426, int(H * 0.50); pg = A(u, 0.15, 0.55)
+    c.line([(100, y), (W - 60, y)], GREY, 2, 0.5, 0)
+    nseg = 40
+    for i in range(int(nseg * pg)):
+        k = i / nseg
+        c.line([(xa + (xb2 - xa) * k, y), (xa + (xb2 - xa) * (k + 1 / nseg), y)], lerpc((255, 190, 100), (255, 90, 70), k), 18, 1.0 - 0.75 * k, 0.5)
+    for xx in (130, 330, 530): c.line([(xx, y - 22), (xx, y + 22)], GREY, 2, 0.8, 0)
+    its = [badge("SCHEMATIC · LOG SCALE"), I(CX, H * 0.15, "HOW HEAVY IS", 48, WHITE, fin(u, 0.0, 0.15)), I(CX, H * 0.15 + 58, "THE BLACK HOLE?", 56, GOLD, fin(u, 0.08, 0.25)),
+           I(130, y + 54, "100,000", 28, WHITE, fin(u, 0.2, 0.4)), I(330, y + 54, "1 MILLION", 28, WHITE, fin(u, 0.3, 0.5)), I(530, y + 54, "10 MILLION", 28, GREY, fin(u, 0.35, 0.55), 'Medium'),
+           I(CX, y + 100, "TIMES THE SUN'S MASS", 24, GREY, fin(u, 0.4, 0.6), 'Medium'),
+           I(CX, H * 0.74, "DEPENDS ON THE MODEL", 50, RED, fin(u, 0.62, 0.82))]
+    return frame(c, its)
+
+# ---- w11: rival explanation ----
+def w11(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.35)
