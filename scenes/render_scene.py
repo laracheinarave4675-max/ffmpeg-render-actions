@@ -4,7 +4,7 @@ Only the modules a scene needs are imported (s* -> scenes, t* -> scenes2, u* -> 
 """
 import os, sys, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-MODS = {'s': ('scenes', 'FUNCS', 'START'), 't': ('scenes2', 'FUNCS2', 'START2'), 'u': ('scenes3', 'FUNCS3', 'START3'), 'v': ('stscenes', 'FUNCSV', 'STARTV')}
+MODS = {'s': ('scenes', 'FUNCS', 'START'), 't': ('scenes2', 'FUNCS2', 'START2'), 'u': ('scenes3', 'FUNCS3', 'START3'), 'v': ('stscenes', 'FUNCSV', 'STARTV'), 'w': ('shscenes', 'FUNCSW', 'STARTW')}
 def lookup(sid):
     mod, f, st = MODS[sid[0]]
     m = importlib.import_module(mod)
@@ -13,6 +13,8 @@ if __name__ == '__main__':
     sid, dur, out = sys.argv[1], float(sys.argv[2]), sys.argv[3]
     if sid[0] not in MODS:
         sys.exit('unknown scene ' + sid)
+    if sid[0] == 'w':  # vertical 9:16 short scenes are drawn at 720x1280
+        os.environ.setdefault('SCENE_W', '720'); os.environ.setdefault('SCENE_H', '1280')
     out_dir = os.path.dirname(os.path.abspath(out)) or '.'
     os.environ['SCENE_OUT'] = out_dir
     fn, start = lookup(sid)
