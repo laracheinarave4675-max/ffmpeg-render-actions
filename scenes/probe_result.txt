@@ -1,0 +1,2 @@
+v2: { "programs": [ ], "streams": [ { "codec_type": "video", "width": 1080, "height": 1920, "duration": "110.760000" }, { "codec_type": "audio", "duration": "110.781995" } ] } | mean_volume: -19.3 dB ; max_volume: -0.1 dB
+v1: { "programs": [ ], "streams": [ { "codec_type": "video", "width": 1080, "height": 1920, "duration": "110.760000" }, { "codec_type": "audio", "duration": "110.781995" } ] } | mean_volume: -19.3 dB ; max_volume: -0.1 dB
