@@ -320,15 +320,16 @@ async function main() {
     return;
   }
 // Director layer: optional music ducking (sidechain). Enabled by payload.music_duck or clips[].direction.audio.music_duck
-const duckCfg = payload.music_duck || (function () {
+const duckCfg = payload.music_duck || ((clips[0] && clips[0].direction && clips[0].direction.fx && clips[0].direction.fx.music_duck) || null) || (function () {
   const c = clips.find(function (x) { return x && x.direction && x.direction.audio && x.direction.audio.music_duck; });
   return c ? c.direction.audio.music_duck : null;
 })();
   const workDir = path.join(process.cwd(), 'work');
   fs.mkdirSync(workDir, { recursive: true });
   // SHORT_PATCH: output size from clips[0].direction.video {width,height}
-  const _dv = (clips[0] && clips[0].direction && clips[0].direction.video) || {};
+  const _dv = (clips[0] && clips[0].direction && (clips[0].direction.video || (clips[0].direction.fx && clips[0].direction.fx.video))) || {}; // SHORT_PATCH2
   const RES = (_dv.width && _dv.height) ? (_dv.width + ':' + _dv.height) : '1920:1080';
+  console.log('Output size ' + RES + ', music duck ' + (duckCfg ? 'on' : 'off'));
   const kenBurns = payload.ken_burns !== false;
   const useTransitions = payload.transitions !== false && clips.length > 1;
   const transDur = payload.transition_duration || 0.8;
@@ -511,7 +512,7 @@ function pairSum() {
       videoPath, narrPath, musicPath,
       musicVol: payload.music_volume || (narrPath ? 0.15 : 0.3),
         duck: duckCfg,
-      narrVol: ((clips[0] && clips[0].direction && clips[0].direction.audio && clips[0].direction.audio.narration_volume) || 1),
+      narrVol: ((clips[0] && clips[0].direction && ((clips[0].direction.audio && clips[0].direction.audio.narration_volume) || (clips[0].direction.fx && clips[0].direction.fx.narration_volume))) || 1),
       outPath: finalPath, tail: endTail, vFade: endVFade, mFade: endMFade
     });
     console.log('Ending applied, total length ' + T.toFixed(1) + 's');
