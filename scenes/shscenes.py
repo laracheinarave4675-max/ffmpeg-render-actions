@@ -208,3 +208,43 @@ def w10(t, T, tg, cap):
 def w11(t, T, tg, cap):
     u = t / T
     c = cvz(1.0, dim=0.35)
+    x1, y1_, x2, y2_ = CX, H * 0.27, CX, H * 0.62; a1 = fin(u, 0.05, 0.3); a2 = fin(u, 0.4, 0.6)
+    disk(c, x1, y1_, 120, (255, 190, 110), (210, 45, 28), 0.9 * a1); disk(c, x1, y1_, 10, (0, 0, 0), (0, 0, 0), a1, 0.2); c.ring(x1, y1_, 17, GOLD, 2, a1, 0.8)
+    c.blob(x1, y1_, 110, (255, 60, 40), 0.25 * a1)
+    disk(c, x2, y2_, 120, (255, 215, 150), (255, 110, 50), 0.9 * a2); c.blob(x2, y2_, 110, (255, 120, 50), 0.28 * a2)
+    its = [badge("SCHEMATIC"), I(CX, y1_ + 168, "BLACK HOLE STAR", 38, WHITE, a1), I(CX, (y1_ + y2_) / 2 + 12, "OR?", 64, GOLD, fin(u, 0.3, 0.5)),
+           I(CX, y2_ + 168, "A GIANT STAR", 38, WHITE, a2), I(CX, H * 0.86, "CANDIDATE — NOT SETTLED", 36, RED, fin(u, 0.65, 0.85))]
+    return frame(c, its)
+
+# ---- w12: little red dots ----
+_R12 = np.random.default_rng(12); DX = _R12.uniform(40, W - 40, 46); DY = _R12.uniform(180, H - 200, 46); DT = np.sort(_R12.uniform(0.05, 0.7, 46)); DR = _R12.uniform(3, 8, 46)
+def w12(t, T, tg, cap):
+    u = t / T
+    c = cvz(1 + 0.15 * sm(u), dim=0.5)
+    for i in range(46):
+        a = fin(u, DT[i], DT[i] + 0.1) * (0.7 + 0.3 * math.sin(tg * 2 + i))
+        if a > 0.02: c.blob(DX[i], DY[i], DR[i] * 3, (255, 60, 40), 0.35 * a); c.dot(DX[i], DY[i], DR[i], (255, 130, 90), a)
+    hx, hy = DX[10], DY[10]; ha = fin(u, 0.72, 0.85)
+    c.ring(hx, hy, 26 + 4 * math.sin(tg * 3), GOLD, 2, ha, 0.8)
+    its = [badge("ILLUSTRATION"), I(CX, H * 0.12, "LITTLE RED DOTS?", 58, WHITE, fin(u, 0.25, 0.42)), I(CX, H * 0.12 + 56, "A PUZZLE OF THE EARLY UNIVERSE", 26, GREY, fin(u, 0.5, 0.7), 'Medium')]
+    return frame(c, its)
+
+# ---- w13: pullback and question ----
+def w13(t, T, tg, cap):
+    u = t / T
+    c = cvz(1 + 0.12 * u, dim=0.5)
+    gs = lerp(900, 260, sm(u)); ga = fin(u, 0.15, 0.55)
+    img = c.out()
+    if ga > 0.02:
+        gl = gal_layer(G, CX, H * 0.40, gs, 62, tg, 0.9)
+        img = screen(img, np.clip(gl * ga * 0.85, 0, 1))
+    mark = H * 0.40
+    img = img.copy()
+    cv2.circle(img, (CX, int(mark)), int(max(2, 18 - 12 * sm(u))), (1.0, 0.35, 0.25), -1, cv2.LINE_AA)
+    its = [badge("ILLUSTRATION"), I(CX, H * 0.74, "HOW MANY OF THE FIRST GIANTS", 32, WHITE, fin(u, 0.35, 0.5), 'Medium'), I(CX, H * 0.74 + 50, "BEGAN HIDING INSIDE", 32, WHITE, fin(u, 0.42, 0.57), 'Medium'),
+           I(CX, H * 0.74 + 110, "A STAR THAT WAS", 46, GOLD, fin(u, 0.5, 0.65)), I(CX, H * 0.74 + 166, "NEVER A STAR?", 56, GOLD, fin(u, 0.56, 0.72))]
+    return frame(img, its)
+
+IDS = ['w01_dot', 'w02_paper', 'w03_time', 'w04_break', 'w05_cut', 'w06_phys', 'w07_title', 'w08_scale', 'w09_lum', 'w10_mass', 'w11_rival', 'w12_dots', 'w13_final']
+_F = [w01, w02, w03, w04, w05, w06, w07, w08, w09, w10, w11, w12, w13]
+FUNCSW = dict(zip(IDS, _F)); STARTW = {k: 0.0 for k in IDS}
