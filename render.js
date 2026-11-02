@@ -41,7 +41,7 @@ async function mixWithEnding(o) {
     'fade=t=out:st=' + Math.max(0, T - o.vFade).toFixed(3) + ':d=' + o.vFade + '[v]');
   if (o.narrPath) {
     inputs += ' -i "' + o.narrPath + '"';
-    chains.push('[' + idx + ':a]' + AFc + ',apad=whole_dur=' + T.toFixed(3) + '[na]');
+    chains.push('[' + idx + ':a]' + AFc + (o.narrVol && o.narrVol !== 1 ? ',volume=' + o.narrVol + ',alimiter=limit=0.97' : '') + ',apad=whole_dur=' + T.toFixed(3) + '[na]');
     labels.push('[na]');
     idx++;
   }
@@ -326,7 +326,9 @@ const duckCfg = payload.music_duck || (function () {
 })();
   const workDir = path.join(process.cwd(), 'work');
   fs.mkdirSync(workDir, { recursive: true });
-  const RES = '1920:1080';
+  // SHORT_PATCH: output size from clips[0].direction.video {width,height}
+  const _dv = (clips[0] && clips[0].direction && clips[0].direction.video) || {};
+  const RES = (_dv.width && _dv.height) ? (_dv.width + ':' + _dv.height) : '1920:1080';
   const kenBurns = payload.ken_burns !== false;
   const useTransitions = payload.transitions !== false && clips.length > 1;
   const transDur = payload.transition_duration || 0.8;
@@ -509,6 +511,7 @@ function pairSum() {
       videoPath, narrPath, musicPath,
       musicVol: payload.music_volume || (narrPath ? 0.15 : 0.3),
         duck: duckCfg,
+      narrVol: ((clips[0] && clips[0].direction && clips[0].direction.audio && clips[0].direction.audio.narration_volume) || 1),
       outPath: finalPath, tail: endTail, vFade: endVFade, mFade: endMFade
     });
     console.log('Ending applied, total length ' + T.toFixed(1) + 's');
