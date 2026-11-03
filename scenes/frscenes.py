@@ -153,3 +153,158 @@ def x06(t, T, tg, cap):
     pan[:] = pan * 0.5 + np.clip(rng.normal(0.06, 0.035, pan.shape), 0, 1).astype(np.float32) * np.array([0.7, 0.85, 1.0], np.float32)
     c.line([(x0, y1), (x1, y1)], GREY, 2, 0.8, 0); c.line([(x0, y0), (x0, y1)], GREY, 2, 0.8, 0)
     fs = np.linspace(0, 1, 90); tau = ((0.9 + 0.8 * fs) ** -2 - 1.7 ** -2) / (0.9 ** -2 - 1.7 ** -2)
+    s = sm(A(u, 0.45, 0.72)); p = fin(u, 0.08, 0.42)
+    xs = x0 + (x1 - x0) * ((0.08 + 0.84 * tau) * (1 - s) + 0.52 * s); ys = y1 - fs * (y1 - y0)
+    n = max(2, int(90 * p))
+    c.line(np.stack([xs[:n], ys[:n]], 1), CY2, 5, 0.95, 1.3)
+    px = np.linspace(x0, x1, 160); pk = x0 + (x1 - x0) * 0.52
+    prof = s * 44 * np.exp(-((px - pk) / 5.0) ** 2) + rng.normal(0, 1.2, 160)
+    c.line(np.stack([px, y0 - 12 - prof], 1), WARM, 2, 0.9, 0.8)
+    if s > 0.9: c.blob(pk, y0 - 12 - 44, 12, WARM, 0.5 * (s - 0.9) * 10)
+    its = [badge("ILLUSTRATIVE · NOT THE ACTUAL DATA"), I(x0 + 4, y0 + 14, "1.7 GHz", 14, GREY, 0.9, 'Regular', 'lm'), I(x0 + 4, y1 - 14, "0.9 GHz", 14, GREY, 0.9, 'Regular', 'lm'),
+           I(x1 - 4, y1 + 16, "TIME", 14, GREY, 0.9, 'Regular', 'rm'),
+           I(CX, H * 0.535, "DISPERSION MEASURE", 20, GREY, fin(u, 0.2, 0.4), 'Medium'), I(CX, H * 0.575, "2,458 pc/cm³", 40, WHITE, fin(u, 0.25, 0.45)),
+           I(CX, H * 0.615, "MORE GAS = MORE DISTANCE", 22, CY2, fin(u, 0.55, 0.75), 'Medium'),
+           I(CX, H * 0.65, "SMEARED BY ~10 SECONDS ACROSS THE BAND*", 17, WARM, fin(u, 0.62, 0.82), 'Medium'),
+           I(CX, H * 0.68, "*calculated from the dispersion measure", 13, GREY, fin(u, 0.68, 0.85), 'Regular')]
+    return frame(c, its)
+
+# ---------- x07: empty sky ----------
+def x07(t, T, tg, cap):
+    u = t / T
+    c = cvz(1 + 0.12 * u, dim=0.30)
+    rng = np.random.default_rng(int(t * 24) % 53)
+    c.im += np.clip(rng.normal(0.025, 0.02, c.im.shape), 0, 1).astype(np.float32)
+    rr = lerp(170, 72, fin(u, 0.12, 0.45)); cy_ = H * 0.42; a = fin(u, 0.1, 0.3)
+    for sx_, sy_ in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        x = CX + sx_ * rr; y = cy_ + sy_ * rr
+        c.line([(x, y), (x - sx_ * 34, y)], CY2, 3, a, 1.0); c.line([(x, y), (x, y - sy_ * 34)], CY2, 3, a, 1.0)
+    c.ring(CX, cy_, 4, CY2, 1, a * (0.5 + 0.5 * math.sin(tg * 4)), 0.5)
+    its = [badge("ILLUSTRATION · SCHEMATIC OF A NON-DETECTION"), I(CX, H * 0.27, "KECK · MMT", 34, WHITE, fin(u, 0.0, 0.15), 'Medium'),
+           I(CX, H * 0.56, "NOTHING DETECTED", 38, WARM, fin(u, 0.55, 0.75))]
+    return frame(c, its)
+
+# ---------- x08: Webb ----------
+_HEX = [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1), (2, 0), (2, -1), (2, -2), (1, -2), (0, -2), (-1, -1), (-2, 0), (-2, 1), (-2, 2), (-1, 2), (0, 2), (1, 1)]
+def x08(t, T, tg, cap):
+    u = t / T; a = fin(u, 0.0, 0.3)
+    c = cvz(1.0, dim=0.3)
+    ph = 0.18 + 0.35 * u
+    def tf(x, y, cx, cy):
+        xr = x * math.cos(ph) - y * math.sin(ph); yr = x * math.sin(ph) + y * math.cos(ph)
+        return (cx + xr, cy + yr * 0.82)
+    for k, (wd, al) in enumerate([(300, 0.30), (270, 0.28), (240, 0.26), (210, 0.24), (180, 0.22)]):
+        pts = [tf(-wd, -20 + k * 14, CX, H * 0.52), tf(wd, -20 + k * 14, CX, H * 0.52), tf(wd * 0.55, 150 + k * 14, CX, H * 0.52), tf(-wd * 0.55, 150 + k * 14, CX, H * 0.52)]
+        c.poly(pts, (150, 170, 215), al * a); c.line(pts + [pts[0]], (190, 205, 240), 1, 0.5 * a, 0.3)
+    s = 40.0
+    for q, r in _HEX:
+        x = s * 1.5 * q; y = s * math.sqrt(3) * (r + q / 2.0)
+        hp = [tf(x + s * 0.94 * math.cos(math.radians(60 * i)), y + s * 0.94 * math.sin(math.radians(60 * i)), CX, H * 0.40) for i in range(6)]
+        c.poly(hp, (255, 200, 90), 0.85 * a); c.line(hp + [hp[0]], (255, 232, 170), 1, 0.9 * a, 0.5)
+    c.blob(CX, H * 0.40, 150, WARM, 0.12 * a)
+    its = [badge("ILLUSTRATION"), I(CX, H * 0.68, "JAMES WEBB SPACE TELESCOPE", 24, CY2, fin(u, 0.3, 0.55), 'Medium'), I(CX, H * 0.705, "NIRCam + NIRSpec", 19, GREY, fin(u, 0.4, 0.65), 'Medium')]
+    return frame(c, its)
+
+# ---------- x09: the host galaxy (real NASA/STScI image when downloadable) ----------
+_URL = 'https://assets.science.nasa.gov/content/dam/science/missions/webb/science/2026/10/STScI-01KKCJGBWX6TE4ABRTFWE9B8SQ.jpg/jcr:content/renditions/2000x1742.jpg'
+_ST = {'img': None, 'box': None, 'tried': False}
+def _find_box(im):
+    m = (im.min(axis=2) >= 245).astype(np.uint8) * 255
+    hh = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, (101, 1)))
+    vv = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, (1, 101)))
+    L = cv2.dilate(hh | vv, np.ones((7, 7), np.uint8))
+    cs, _ = cv2.findContours(L, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    best = None
+    for ct in cs:
+        x, y, w, h = cv2.boundingRect(ct)
+        if w < 260 or h < 260 or w > 0.85 * im.shape[1] or h > 0.85 * im.shape[0]: continue
+        if best is None or w * h > best[2] * best[3]: best = (x, y, w, h)
+    return best
+def _load():
+    if _ST['tried']: return
+    _ST['tried'] = True
+    try:
+        import urllib.request
+        data = urllib.request.urlopen(urllib.request.Request(_URL, headers={'User-Agent': 'Mozilla/5.0'}), timeout=90).read()
+        im = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        assert im is not None and im.shape[1] >= 800
+        _ST['box'] = _find_box(im)
+        _ST['img'] = (im[:, :, ::-1].astype(np.float32) / 255.0)
+        print('x09: real image', im.shape, 'inset box', _ST['box'], flush=True)
+    except Exception as e:
+        print('x09: image unavailable ->', repr(e), flush=True)
+_RF = np.random.default_rng(21)
+def x09(t, T, tg, cap):
+    u = t / T; _load()
+    im = _ST['img']; its = []
+    if im is not None:
+        ih, iw = im.shape[:2]; s0 = W / iw; box = _ST['box']; k = sm(A(u, 0.12, 0.85))
+        if box: bx, by, bw, bh = box; fx, fy = bx + bw / 2.0, by + bh / 2.0; zmax = min(5.0, 0.88 * W / (bw * s0))
+        else: fx, fy = iw * 0.5, ih * 0.40; zmax = 1.5
+        z = math.exp(math.log(max(zmax, 1.0)) * k); s = s0 * z
+        fxm = lerp(iw / 2.0, fx, k); fym = lerp(ih / 2.0, fy, k); cyc = H * 0.46
+        M = np.float32([[s, 0, CX - s * fxm], [0, s, cyc - s * fym]])
+        wi = cv2.warpAffine(im, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+        mk = cv2.warpAffine(np.ones((ih, iw), np.float32), M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)[..., None]
+        if s < 0.6: wi = cv2.GaussianBlur(wi, (0, 0), 0.6)
+        img = np.clip(zbg(1.0, dim=0.25) * (1 - mk) + wi * mk * 1.05, 0, 1)
+        if box:
+            ba = fin(u, 0.38, 0.62)
+            xa = s * (bx - fxm) + CX; xb = s * (bx + bw - fxm) + CX; ya = s * (by - fym) + cyc; yb = s * (by + bh - fym) + cyc
+            for (xx, yy, dx, dy) in ((xa, ya, 1, 1), (xb, ya, -1, 1), (xa, yb, 1, -1), (xb, yb, -1, -1)):
+                its.append({'k': 'line', 'x1': xx, 'y1': yy, 'x2': xx + dx * 34, 'y2': yy, 'c': CY2, 'a': ba, 'wd': 3})
+                its.append({'k': 'line', 'x1': xx, 'y1': yy, 'x2': xx, 'y2': yy + dy * 34, 'c': CY2, 'a': ba, 'wd': 3})
+        its += [badge("REAL IMAGE · JAMES WEBB SPACE TELESCOPE", 1.0, GOLD), I(CX, H * 0.255, "THE HOST GALAXY", 26, WHITE, fin(u, 0.1, 0.25)), I(CX, H * 0.255 + 34, "FRB 20240304B", 20, CY2, fin(u, 0.15, 0.3), 'Medium'),
+                I(CX, H * 0.705, "WHITE CROSS: WHERE THE BURST CAME FROM", 17, WHITE, fin(u, 0.5, 0.7), 'Medium'),
+                I(CX, H * 0.74, "NASA · ESA · CSA · STScI · T. NANAYAKKARA (USYD) · J. DEPASQUALE (STScI)", 12, GREY, 0.9, 'Regular')]
+        return frame(img, its)
+    c = cvz(1 + 0.2 * sm(u), dim=0.45)
+    for i in range(70): c.blob(_RF.uniform(40, W - 40), _RF.uniform(300, 900), _RF.uniform(2, 6), (170, 200, 255), 0.35)
+    c.blob(CX + 30, H * 0.46, 7, CY2, 0.7 * fin(u, 0.4, 0.7)); c.ring(CX + 30, H * 0.46, 26 + 4 * math.sin(tg * 3), WHITE, 2, fin(u, 0.5, 0.8), 0.8)
+    its = [badge("ILLUSTRATION"), I(CX, H * 0.255, "A TINY, FAINT GALAXY", 28, WHITE, fin(u, 0.1, 0.3)), I(CX, H * 0.705, "RIGHT WHERE THE BURST BEGAN", 20, CY2, fin(u, 0.5, 0.7), 'Medium')]
+    return frame(c, its)
+
+# ---------- x10: redshift + cosmic timeline ----------
+def x10(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.3); its = [badge("ILLUSTRATION")]
+    pa = 1 - fin(u, 0.44, 0.54)
+    if pa > 0.01:
+        k = min(1.0, u / 0.34); xs = np.linspace(60, 660, 240)
+        lam = 24 + 62 * sm(np.clip((xs - 60) / 600.0, 0, 1)) * k
+        phi = np.cumsum(2 * math.pi / lam) * (xs[1] - xs[0])
+        ys = H * 0.37 + 58 * np.sin(phi - tg * 5)
+        for j in range(12):
+            a_, b_ = j * 20, min(240, j * 20 + 21); f = j / 11.0
+            col = lerpc((170, 215, 255), (255, 80, 60), f)
+            c.line(np.stack([xs[a_:b_], ys[a_:b_]], 1), col, 3, 0.95 * pa, 1.0)
+        z = 2.148 * sm(A(u, 0.1, 0.4))
+        its += [I(CX, H * 0.285, "LIGHT STRETCHED BY EXPANDING SPACE", 19, CY2, fin(u, 0.0, 0.12) * pa, 'Medium'),
+                I(CX, H * 0.50, "z = %.3f" % z, 46, WHITE, fin(u, 0.1, 0.25) * pa),
+                I(CX, H * 0.545, "H-ALPHA: 0.656 µm TO ~2.07 µm (CALCULATED)", 15, GREY, fin(u, 0.3, 0.42) * pa, 'Regular')]
+    tb = fin(u, 0.5, 0.62)
+    if tb > 0.01:
+        x0_, x1_, y = 90, 630, H * 0.42; mx = x0_ + (x1_ - x0_) * 3.0 / 13.8
+        c.line([(x0_, y), (x1_, y)], GREY, 3, 0.7 * tb, 0); c.line([(x0_, y), (mx, y)], WARM, 3, 0.95 * tb, 1.0)
+        c.blob(mx, y, 16, WARM, 0.8 * tb); c.dot(mx, y, 7, WARM, tb)
+        pp = fin(u, 0.7, 0.97); px = lerp(mx, x1_, pp)
+        c.line([(mx, y), (px, y)], CY2, 3, 0.9 * tb * (pp > 0), 1.0); c.dot(px, y, 6, ICE, tb * (pp > 0))
+        its += [I(x0_, y + 34, "BIG BANG", 15, GREY, tb, 'Medium', 'lm'), I(x1_, y + 34, "TODAY · 13.8 BILLION YEARS", 15, GREY, tb, 'Medium', 'rm'),
+                I(mx + 20, y - 66, "UNIVERSE: ABOUT 3 BILLION YEARS OLD", 19, WHITE, fin(u, 0.55, 0.7), 'Medium', 'lm'),
+                I(mx + 20, y - 38, "ABOUT 22% OF ITS AGE TODAY", 15, GREY, fin(u, 0.62, 0.78), 'Regular', 'lm'),
+                I(CX, y + 90, "TRAVEL TIME: 10+ BILLION YEARS", 21, CY2, fin(u, 0.8, 0.95), 'Medium')]
+    return frame(c, its)
+
+# ---------- shared: young dwarf galaxy (particles) ----------
+_RG = np.random.default_rng(31)
+_KN = [(-0.30, -0.14, 1.0), (0.26, -0.30, 0.9), (0.34, 0.22, 0.8), (-0.18, 0.34, 0.7)]
+_PX = []; _PY = []; _PW = []; _PK = []; _PC = []
+for ki, (kx, ky, ks) in enumerate(_KN):
+    n = 420; _PX.append(kx + _RG.normal(0, 0.09 * ks, n)); _PY.append(ky + _RG.normal(0, 0.09 * ks, n)); _PW.append(_RG.uniform(0.5, 1.2, n) * ks); _PK.append(np.full(n, ki)); _PC.append(_RG.random(n) < 0.18)
+_PX.append(_RG.normal(0, 0.55, 1100)); _PY.append(_RG.normal(0, 0.40, 1100)); _PW.append(_RG.uniform(0.12, 0.35, 1100)); _PK.append(np.full(1100, -1)); _PC.append(np.zeros(1100, bool))
+_PX = np.concatenate(_PX); _PY = np.concatenate(_PY); _PW = np.concatenate(_PW); _PK = np.concatenate(_PK); _PC = np.concatenate(_PC)
+def dwarf_layer(cx, cy, scale, ang, tg, gain=1.0):
+    ca, sa = math.cos(ang), math.sin(ang)
+    xr = _PX * ca - _PY * sa; yr = (_PX * sa + _PY * ca) * 0.8
+    fl = np.where(_PK >= 0, 1.0 + 0.45 * np.sin(tg * 3.1 + _PK * 1.7), 1.0)
+    sx = (xr * scale + cx).astype(np.int32); sy = (yr * scale + cy).astype(np.int32)
