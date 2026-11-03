@@ -308,3 +308,155 @@ def dwarf_layer(cx, cy, scale, ang, tg, gain=1.0):
     xr = _PX * ca - _PY * sa; yr = (_PX * sa + _PY * ca) * 0.8
     fl = np.where(_PK >= 0, 1.0 + 0.45 * np.sin(tg * 3.1 + _PK * 1.7), 1.0)
     sx = (xr * scale + cx).astype(np.int32); sy = (yr * scale + cy).astype(np.int32)
+    ok = (sx >= 0) & (sx < W) & (sy >= 0) & (sy < H)
+    idx = sy[ok] * W + sx[ok]; wgt = (_PW * fl)[ok] * gain
+    cols = np.where(_PC[ok, None], np.array([1.0, 0.72, 0.42], np.float32), np.array([0.62, 0.80, 1.0], np.float32))
+    layer = np.zeros((H, W, 3), np.float32)
+    for ch in range(3): layer[:, :, ch] = np.bincount(idx, weights=wgt * cols[:, ch], minlength=W * H).reshape(H, W)
+    k = float(np.clip(110.0 / max(scale, 1.0), 0.6, 6.0))
+    g = cv2.GaussianBlur(layer, (0, 0), max(1.2, scale * 0.025)) * 3.2 * k + layer * 0.9
+    return 1 - np.exp(-g)
+def x11(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.3); cx_, cy_ = CX, H * 0.42
+    gh = fin(u, 0.1, 0.35)
+    th = np.linspace(0, 2 * math.pi, 140)
+    dashed(c, cx_ + 255 * np.cos(th), cy_ + 105 * np.sin(th), GREY, 2, 0.55 * gh)
+    img = screen(c.out(), dwarf_layer(cx_, cy_, 150, 0.5 * u, tg) * fin(u, 0.0, 0.2))
+    its = [badge("SIMULATION · ILLUSTRATIVE SCALE"), I(CX, cy_ - 150, "TYPICAL FRB HOST (EXPECTED)", 16, GREY, gh, 'Medium'),
+           I(CX, H * 0.585, "1,000 TIMES LESS MASSIVE THAN EXPECTED", 20, WHITE, fin(u, 0.4, 0.6), 'Medium'),
+           I(CX, H * 0.625, "METAL-POOR · STARBURST", 19, CY2, fin(u, 0.55, 0.75), 'Medium')]
+    return frame(img, its)
+
+# ---------- x12: magnetar concept ----------
+def x12(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.3); cx_, cy_ = CX, H * 0.40
+    dim = 1 - 0.5 * fin(u, 0.72, 0.88); pul = 0.55 + 0.45 * math.sin(tg * 7.5)
+    tilt = math.radians(28) + 0.12 * math.sin(tg * 0.9)
+    rng = np.random.default_rng(int(t * 24) % 31)
+    for L in (55, 95, 140):
+        th = np.linspace(0.12, math.pi - 0.12, 60); r = L * np.sin(th) ** 2
+        for sgn in (1, -1):
+            x = sgn * r * np.sin(th); y = -L * 0.0 - r * np.cos(th) * 0 + (L * np.sin(th) ** 2) * 0
+            px = sgn * r * np.sin(th) * 1.0; py = r * np.cos(th) * 1.0
+            xr = px * math.cos(tilt) - py * math.sin(tilt); yr = px * math.sin(tilt) + py * math.cos(tilt)
+            fl = 1.0 if u < 0.72 else (0.6 + 0.4 * rng.random())
+            c.line(np.stack([cx_ + xr, cy_ + yr], 1), CY2, 2, 0.7 * dim * fl, 1.0)
+    for sgn in (1, -1):
+        ax = sgn * math.sin(tilt) * -1; ay = sgn * math.cos(tilt)
+        c.poly([(cx_, cy_), (cx_ + ax * 230 - ay * 55, cy_ + ay * 230 + ax * 55), (cx_ + ax * 230 + ay * 55, cy_ + ay * 230 - ax * 55)], CY2, 0.07 * dim * pul)
+    c.blob(cx_, cy_, 22, (200, 225, 255), 0.7 * dim * (0.6 + 0.4 * pul)); c.dot(cx_, cy_, 8, (255, 255, 255), dim)
+    a1 = fin(u, 0.1, 0.3) * (1 - fin(u, 0.68, 0.78)); a2 = fin(u, 0.74, 0.9)
+    its = [badge("ARTIST CONCEPT"), I(CX, H * 0.60, "LEADING IDEA: YOUNG MAGNETAR", 26, WHITE, a1, 'Medium'),
+           I(CX, H * 0.60, "ORIGIN NOT CONFIRMED", 30, WARM, a2), I(CX, H * 0.665, "?", 84, WARM, fin(u, 0.8, 0.95) * 0.9)]
+    return frame(c, its)
+
+# ---------- cosmic web helpers ----------
+_RW = np.random.default_rng(41)
+def _filaments(n=12, steps=28):
+    fl = []
+    for _ in range(n):
+        x = _RW.uniform(-300, 300); y = _RW.uniform(-700, 700); ang = _RW.uniform(0, 2 * math.pi); pts = [(x, y)]
+        for _ in range(steps):
+            ang += _RW.normal(0, 0.28); x += 38 * math.cos(ang); y += 38 * math.sin(ang); pts.append((x, y))
+        fl.append(np.array(pts, np.float32))
+    return fl
+_FIL = _filaments()
+def _web(c, zoom, cx, cy, a=1.0, lit=None):
+    for f in _FIL:
+        pts = f * zoom + np.array([cx, cy], np.float32)
+        al = 0.30 * a
+        if lit is not None:
+            for i in range(len(pts) - 1):
+                mx, my = (pts[i] + pts[i + 1]) / 2
+                w = lit(mx, my)
+                if w > 0.02: c.line(pts[i:i + 2], (140, 175, 255), 2, al * w * 2.2, 0.8)
+        else: c.line(pts, (120, 150, 235), 2, al, 0.6)
+        for p in pts[::5]: c.blob(p[0], p[1], 8 * zoom ** 0.5, (130, 170, 255), 0.10 * a)
+
+# ---------- x13: cosmic flashlight ----------
+def x13(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.28); ax, ay = CX, H * 0.64
+    sw = math.radians(-22 + 44 * sm(u)); rv = fin(u, 0.0, 0.5)
+    def cone(x, y):
+        dx = x - ax; dy = ay - y
+        if dy < 10: return 0.0
+        d = math.atan2(dx, dy) - sw
+        return math.exp(-(d / 0.30) ** 2) * min(1.0, dy / (rv * 560 + 1))
+    _web(c, 1.0, CX, H * 0.40, 1.0, lit=cone)
+    L = rv * 560
+    c.poly([(ax, ay), (ax + L * math.sin(sw - 0.30), ay - L * math.cos(sw - 0.30)), (ax + L * math.sin(sw + 0.30), ay - L * math.cos(sw + 0.30))], ICE, 0.10)
+    c.blob(ax, ay, 26, (255, 255, 255), 0.6); c.dot(ax, ay, 5, (255, 255, 255), 1.0)
+    its = [badge("ILLUSTRATION"), I(CX, H * 0.72, "COSMIC FLASHLIGHT", 34, WHITE, fin(u, 0.35, 0.6))]
+    return frame(c, its)
+
+# ---------- x14: fingerprints on the signal ----------
+def x14(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.28); zm = 1.0 + 0.25 * u
+    _web(c, zm, CX, H * 0.38, 1.0)
+    py = lerp(H * 0.52, H * 0.26, sm(u)); n = int(u * 4.0 + 0.0001) if u < 0.75 else 3
+    n = min(3, int(max(0, (u - 0.2)) / 0.22) + (1 if u > 0.2 else 0)) if u > 0.2 else 0
+    for ev in (0.25, 0.5, 0.75):
+        te = u - ev
+        if 0 < te < 0.16: c.ring(CX, lerp(H * 0.52, H * 0.26, sm(ev)), te / 0.16 * 70, ICE, 2, (1 - te / 0.16) * 0.8, 0.9); c.blob(CX, lerp(H * 0.52, H * 0.26, sm(ev)), 24, CY2, 0.4 * (1 - te / 0.16))
+    c.blob(CX, py, 18, CY2, 0.8); c.dot(CX, py, 5, (255, 255, 255), 1.0)
+    y0 = H * 0.70; w = 5 + n * 15; xs = np.linspace(100, 620, 160)
+    for off, col in ((-n * 4, (255, 110, 90)), (0, (150, 235, 160)), (n * 4, (110, 160, 255))):
+        ys = y0 - 40 * np.exp(-(((xs - 360 + off) / w) ** 2)) / (1 + 0.5 * n)
+        c.line(np.stack([xs, ys], 1), col, 2, 0.75, 0.6)
+    its = [badge("SIMULATION · NOT TO SCALE"), I(CX, H * 0.575, "GAS ADDS DELAY —", 22, WHITE, fin(u, 0.1, 0.3), 'Medium'), I(CX, H * 0.61, "AND LEAVES A FINGERPRINT", 22, CY2, fin(u, 0.2, 0.4), 'Medium'),
+           I(CX, H * 0.74, "TOTAL DM 2,458 pc/cm³", 17, GREY, fin(u, 0.4, 0.6), 'Medium')]
+    return frame(c, its)
+
+# ---------- x15: the whole sightline ----------
+def x15(t, T, tg, cap):
+    u = t / T
+    c = cvz(1.0, dim=0.28); ex, ey = 110, H * 0.60; gx_, gy_ = 610, H * 0.28
+    _web(c, 0.8, CX, H * 0.40, 0.8)
+    p = fin(u, 0.0, 0.45); ts = np.linspace(0, 1, 60)
+    px = lerp(gx_, ex, ts) + 40 * np.sin(ts * math.pi); py = lerp(gy_, ey, ts) - 30 * np.sin(ts * math.pi)
+    for i in range(0, 60, 4): c.blob(px[i], py[i], 22, (120, 160, 255), 0.07 * p)
+    n = max(2, int(60 * p)); c.line(np.stack([px[:n], py[:n]], 1), ICE, 3, 0.95, 1.2)
+    c.blob(gx_, gy_, 16, WARM, 0.7); c.dot(gx_, gy_, 5, WARM, 1.0)
+    c.dot(ex, ey, 7, CY2, 1.0); c.ring(ex, ey, 14 + 3 * math.sin(tg * 3), CY2, 2, 0.8, 0.8)
+    vm = 0.80; vx, vy = px[int(vm * 59)], py[int(vm * 59)]; va = fin(u, 0.45, 0.65)
+    c.ring(vx, vy, 20, WARM, 2, va, 0.8)
+    y = H * 0.665; xa, xb = 90, 630; xm = xa + (xb - xa) * 3.0 / 13.8; hp = fin(u, 0.3, 0.6)
+    c.line([(xa, y), (xb, y)], GREY, 4, 0.6, 0); c.line([(xm, y), (xm + (xb - xm) * hp, y)], CY2, 4, 0.95, 1.0)
+    its = [badge("SIMULATION · NOT TO SCALE"), I(ex, ey + 34, "EARTH", 15, CY2, 0.9, 'Medium'), I(gx_ - 6, gy_ - 28, "HOST GALAXY", 15, WARM, 0.9, 'Medium', 'rm'),
+           I(vx + 26, vy + 4, "VIRGO CLUSTER", 16, WARM, va, 'Medium', 'lm'),
+           I(CX, H * 0.62, "ABOUT 80% OF COSMIC HISTORY", 22, CY2, fin(u, 0.35, 0.6), 'Medium'),
+           I(xa, y + 28, "BIG BANG", 14, GREY, 0.9, 'Medium', 'lm'), I(xb, y + 28, "TODAY", 14, GREY, 0.9, 'Medium', 'rm')]
+    return frame(c, its)
+
+# ---------- x16: pull back into the Universe + the question ----------
+_RP = np.random.default_rng(51); NP = 160
+_PXW = _RP.uniform(-34, 34, NP); _PYW = _RP.uniform(-50, 50, NP); _PCI = _RP.choice(3, NP, p=[.5, .35, .15]); _PSZ = _RP.uniform(0.6, 1.6, NP)
+_SIG = [(80.0, 400.0, 0.5, -0.3), (640.0, 260.0, -0.4, 0.2), (150.0, 980.0, 0.3, 0.4), (600.0, 880.0, -0.5, -0.2), (330.0, 300.0, 0.0, 0.5), (60.0, 620.0, 0.45, 0.1)]
+def x16(t, T, tg, cap):
+    u = t / T
+    k = sm(A(u, 0.0, 0.85)); sc = math.exp(lerp(math.log(250.0), math.log(11.0), k))
+    c = cvz(1 + 0.05 * u, dim=0.3); cx_, cy_ = CX, H * 0.44
+    for i in range(NP):
+        x = cx_ + _PXW[i] * sc; y = cy_ + _PYW[i] * sc
+        if x < -30 or x > W + 30 or y < -30 or y > H + 30: continue
+        a = 0.55 * fin(u, 0.04, 0.4)
+        c.blob(x, y, max(1.5, _PSZ[i] * 2.4), _GCOL[_PCI[i]], a)
+    for sx, sy, vx, vy in _SIG:
+        a = fin(u, 0.40, 0.6)
+        if a < 0.02: continue
+        x = sx + vx * 40 * (u - 0.4) * 3; y = sy + vy * 40 * (u - 0.4) * 3
+        c.blob(x, y, 7, CY2, 0.5 * a); c.dot(x, y, 2.5, (255, 255, 255), a); c.ring(x, y, 10 + 5 * math.sin(tg * 3 + sx), CY2, 1, 0.5 * a, 0.4)
+    img = screen(c.out(), dwarf_layer(cx_, cy_, sc * 0.9, 0.5 + 0.3 * u, tg) * (1 - 0.6 * k))
+    y1 = H * 0.215; qa = fin(u, 0.33, 0.43); oa = 1 - fin(u, 0.26, 0.32)
+    its = [badge("SIMULATION"),
+           I(CX, y1, "1 FLASH", 38, WHITE, fin(u, 0.0, 0.05) * oa), I(CX, y1 + 44, "MILLISECONDS", 38, WHITE, fin(u, 0.05, 0.1) * oa), I(CX, y1 + 84, "10+ BILLION YEARS IN TRANSIT", 22, CY2, fin(u, 0.1, 0.17) * oa, 'Medium'),
+           I(CX, H * 0.30, "HOW MANY MORE MESSAGES", 34, ICE, qa * 0.92, 'Regular'), I(CX, H * 0.30 + 46, "ARE STILL CROSSING THE DARK?", 34, ICE, fin(u, 0.37, 0.47) * 0.92, 'Regular')]
+    return frame(img, its)
+
+IDS = ['x01_flash', 'x02_travel', 'x03_title', 'x04_blink', 'x05_dishes', 'x06_waterfall', 'x07_empty', 'x08_webb', 'x09_host', 'x10_redshift', 'x11_dwarf', 'x12_magnetar', 'x13_flashlight', 'x14_web', 'x15_sightline', 'x16_pullback']
+_F = [x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14, x15, x16]
+FUNCSX = dict(zip(IDS, _F)); STARTX = {k: 0.0 for k in IDS}
