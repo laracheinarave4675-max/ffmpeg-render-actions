@@ -82,3 +82,87 @@ def z03(t, T, tg, cap):
 # ---------- z04: the Milky Way ----------
 _RM = np.random.default_rng(14); NMW = 9000
 _r = 0.04 + 0.96 * _RM.random(NMW) ** 0.75; _arm = _RM.integers(0, 4, NMW); _th = np.log(_r / 0.04) * 3.0 + _arm * (math.pi / 2) + _RM.normal(0, 0.22, NMW) * (0.4 + _r)
+_bul = _RM.random(NMW) < 0.22; _r = np.where(_bul, np.abs(_RM.normal(0, 0.09, NMW)), _r); _th = np.where(_bul, _RM.uniform(0, 2 * math.pi, NMW), _th)
+_MX = _r * np.cos(_th); _MY = _r * np.sin(_th); _MW = np.where(_bul, 0.9, 0.5 + 0.6 * _RM.random(NMW)); _SUN = (0.52 * math.cos(1.1), 0.52 * math.sin(1.1))
+def _mw_layer(cx, cy, sc, rot, gain=1.0):
+    ca, sa = math.cos(rot), math.sin(rot); X = _MX * ca - _MY * sa; Y = (_MX * sa + _MY * ca) * 0.62
+    col = np.where(_bul[:, None], np.array([1.0, 0.82, 0.5], np.float32), np.array([0.6, 0.78, 1.0], np.float32)) * (_MW * gain)[:, None]
+    return layer(cx + X * sc, cy + Y * sc, col.astype(np.float32), max(1.0, sc * 0.012), 1.8)
+def z04(t, T, tg, cap):
+    u = t / T; k = sm(A(u, 0.0, 0.6)); sc = 300.0 * lerp(3.2, 1.0, k); rot = 0.35 * u; ca, sa = math.cos(rot), math.sin(rot)
+    sunx, suny = _SUN[0] * ca - _SUN[1] * sa, (_SUN[0] * sa + _SUN[1] * ca) * 0.62
+    cx = CX - lerp(sunx, 0.0, k) * sc; cy = H * 0.42 - lerp(suny, 0.0, k) * sc
+    c = cvz(1.0, dim=0.3); c.blob(cx, cy, sc * 0.5, (255, 220, 160), 0.18); img = screen(c.out(), _mw_layer(cx, cy, sc, rot))
+    c2 = Cv(); c2.im = img; mx, my = cx + sunx * sc, cy + suny * sc; c2.blob(mx, my, 8, (255, 230, 160), 0.8); c2.dot(mx, my, 3, (255, 245, 210), 1.0); c2.ring(mx, my, 14 + 2 * math.sin(tg * 4), CY2, 1, 0.9, 0.5)
+    bar_a = fin(u, 0.4, 0.62); yb = H * 0.64; hw = 300.0
+    c2.line([(CX - hw, yb), (CX + hw, yb)], GREY, 3, 0.8 * bar_a, 0.3)
+    pp = fin(u, 0.55, 0.97); c2.blob(CX - hw + 2 * hw * pp, yb, 10, WARM, 0.9 * bar_a * (pp > 0)); c2.dot(CX - hw + 2 * hw * pp, yb, 4, WARM, bar_a * (pp > 0))
+    its = [badge("SIMULATION · ILLUSTRATIVE"), I(CX, H * 0.255, "THE MILKY WAY · 100-400 BILLION STARS", 18, WHITE, fin(u, 0.3, 0.5), 'Medium'),
+           I(mx + 16, my + 20, "THE SUN", 14, GOLD, fin(u, 0.0, 0.2), 'Medium', 'lm'), I(CX, yb + 30, "100,000 LIGHT-YEARS ACROSS", 18, CY2, bar_a, 'Medium'),
+           I(CX, yb + 56, "LIGHT NEEDS 100,000 YEARS TO CROSS IT", 15, WARM, fin(u, 0.6, 0.85), 'Medium')]
+    return frame(c2.out(), its)
+
+# ---------- z05: neighbouring galaxies ----------
+_RG5 = np.random.default_rng(55); NG5 = 120
+_GX5 = _RG5.uniform(-150, 150, NG5); _GY5 = _RG5.uniform(-220, 220, NG5); _GS5 = _RG5.uniform(0.6, 1.8, NG5)
+def z05(t, T, tg, cap):
+    u = t / T; k = sm(A(u, 0.0, 1.0)); sc = 300.0 * (0.02 ** k) * 1.0; cx, cy = CX, H * 0.42
+    c = cvz(1.0, dim=0.3); its = [badge("SIMULATION · ILLUSTRATIVE")]
+    c.blob(cx, cy, max(3.0, sc * 0.4), (255, 225, 170), 0.6); c.dot(cx, cy, max(1.5, sc * 0.25), (255, 245, 220), 1.0)
+    ax, ay = cx + 50 * sc * math.cos(0.35), cy - 50 * sc * math.sin(0.35)
+    c.blob(ax, ay, max(4.0, 2.2 * sc * 0.6), (190, 215, 255), 0.55); c.dot(ax, ay, max(2.0, 2.2 * sc * 0.25), (225, 235, 255), 1.0)
+    for dx, dy, r_ in ((3.2, 0.8, 0.9), (3.9, 1.5, 0.6), (54, 20, 0.7), (-9, 12, 0.5), (14, -22, 0.5), (-30, -8, 0.6)):
+        c.blob(cx + dx * sc, cy + dy * sc, max(1.5, r_ * sc * 0.5), (200, 215, 240), 0.5)
+    fa = fin(u, 0.35, 0.85)
+    for i in range(NG5):
+        c.blob(cx + _GX5[i] * (0.5 + 1.6 * fa) * 2.2, cy + _GY5[i] * (0.5 + 1.6 * fa) * 2.2, _GS5[i] * 1.6, _GCOL[i % 3], 0.45 * fa)
+    its += [I(CX, H * 0.63, "ANDROMEDA · 2.5 MILLION LIGHT-YEARS", 17, CY2, fin(u, 0.3, 0.5) * (1 - fin(u, 0.8, 0.95)), 'Medium'),
+            I(CX, H * 0.66, "HUNDREDS OF BILLIONS MORE GALAXIES", 20, WHITE, fin(u, 0.55, 0.8), 'Medium')]
+    img = c.out()
+    if sc > 30: img = screen(img, _mw_layer(cx, cy, sc, 0.35 * 1.0) * (1 - fin(u, 0.15, 0.4)))
+    return frame(img, its)
+
+# ---------- z06/z07: the cosmic web and the observable universe ----------
+_RU = np.random.default_rng(66); _UX = []; _UY = []
+for _ in range(46):
+    x, y = _RU.uniform(-1, 1, 2); ang = _RU.uniform(0, 2 * math.pi)
+    for _s in range(40):
+        ang += _RU.normal(0, 0.35); x += 0.035 * math.cos(ang); y += 0.035 * math.sin(ang)
+        if x * x + y * y < 1.0:
+            for _j in range(4): _UX.append(x + _RU.normal(0, 0.012)); _UY.append(y + _RU.normal(0, 0.012))
+for _ in range(1500):
+    a_ = _RU.uniform(0, 2 * math.pi); r_ = math.sqrt(_RU.random()); _UX.append(r_ * math.cos(a_)); _UY.append(r_ * math.sin(a_))
+_UX = np.array(_UX, np.float32); _UY = np.array(_UY, np.float32)
+def _web_scene(u, tg, s, its, text_a):
+    cx, cy = CX, H * 0.42; c = cvz(1.0, dim=0.28); R = 330.0 * s
+    col = np.ones((len(_UX), 3), np.float32) * np.array([0.6, 0.78, 1.0], np.float32) * 0.55
+    img = screen(c.out(), layer(cx + _UX * R, cy + _UY * R, col, max(1.0, R * 0.006), 2.2))
+    c2 = Cv(); c2.im = img; th = np.linspace(0, 2 * math.pi, 200)
+    c2.line(np.stack([cx + R * np.cos(th), cy + R * np.sin(th)], 1), CY2, 2, 0.9 * text_a, 1.0)
+    dashed(c2, cx + R * 1.28 * np.cos(th), cy + R * 1.28 * np.sin(th), GREY, 1, 0.5 * text_a)
+    c2.blob(cx, cy, 10, (110, 200, 255), 0.9); c2.dot(cx, cy, 3.0, (255, 255, 255), 1.0); c2.ring(cx, cy, 12 + 3 * math.sin(tg * 4), CY2, 1, 0.9, 0.5)
+    return c2.out()
+def z06(t, T, tg, cap):
+    u = t / T; s = 0.12 + 0.88 * sm(A(u, 0.0, 0.85)); ta = fin(u, 0.55, 0.8)
+    img = _web_scene(u, tg, s, None, ta)
+    its = [badge("SIMULATION · NOT TO SCALE"), I(CX, H * 0.66, "THE OBSERVABLE UNIVERSE", 26, WHITE, fin(u, 0.45, 0.65)), I(CX, H * 0.70, "93 BILLION LIGHT-YEARS ACROSS", 20, CY2, fin(u, 0.55, 0.75), 'Medium'),
+           I(CX, H * 0.735, "THE WHOLE UNIVERSE MAY BE FAR LARGER", 15, GREY, fin(u, 0.75, 0.95), 'Medium')]
+    return frame(img, its)
+def z07(t, T, tg, cap):
+    u = t / T; s = 1.0 - 0.82 * sm(A(u, 0.0, 0.9)); img = _web_scene(u, tg, s, None, 1.0)
+    its = [badge("SIMULATION · NOT TO SCALE"), I(CX, H * 0.64, "A PALE BLUE DOT", 36, WHITE, fin(u, 0.1, 0.3)), I(CX, H * 0.70, "EVERYONE WHO EVER LIVED", 22, CY2, fin(u, 0.5, 0.7), 'Medium'), I(CX, H * 0.735, "WAS THERE", 22, CY2, fin(u, 0.6, 0.8), 'Medium')]
+    return frame(img, its)
+
+# ---------- z08: back to the human under the stars ----------
+def z08(t, T, tg, cap):
+    u = t / T; w = 1 - fin(u, 0.18, 0.5); c = land_sky(0.6, 0.20 * fin(u, 0.2, 0.6)); ylimb = H * 0.64 - 6 * u
+    for i in range(60):
+        an = i * 2.39996; r0 = 30 + (i * 37) % 260; L = (60 + 380 * sm(A(u, 0.0, 0.25))) * (1 - fin(u, 0.2, 0.3)); x = CX + r0 * math.cos(an); y = H * 0.42 + r0 * math.sin(an)
+        c.line([(x, y), (x + L * 0.4 * math.cos(an), y + L * 0.4 * math.sin(an))], (190, 220, 255), 1, 0.6 * w * (u < 0.3), 0.6)
+    c.dot(CX, H * 0.42, 3.0, CY2, w); hz = fin(u, 0.25, 0.55); c.blob(CX, ylimb, 170, (60, 90, 160), 0.38 * hz)
+    img = c.out(); paste(img, earth_sp(CX, ylimb + 1800, 1800.0, tg, 0.0), hz); human(img, CX, ylimb + 2, 1.0)
+    its = [badge("ILLUSTRATION"), I(CX, H * 0.55, "YOU ARE HERE", 28, CY2, fin(u, 0.72, 0.9), 'Medium')]
+    return frame(img, its)
+
+IDS = ['z01_human', 'z02_sun', 'z03_solar', 'z04_galaxy', 'z05_group', 'z06_web', 'z07_dot', 'z08_look']
+FUNCSZ = dict(zip(IDS, [z01, z02, z03, z04, z05, z06, z07, z08])); STARTZ = {k: 0.0 for k in IDS}
