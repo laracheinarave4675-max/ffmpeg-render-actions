@@ -4,7 +4,7 @@ Only the modules a scene needs are imported (s* -> scenes, t* -> scenes2, u* -> 
 """
 import os, sys, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-MODS = {'s': ('scenes', 'FUNCS', 'START'), 't': ('scenes2', 'FUNCS2', 'START2'), 'u': ('scenes3', 'FUNCS3', 'START3'), 'v': ('stscenes', 'FUNCSV', 'STARTV'), 'w': ('shscenes', 'FUNCSW', 'STARTW'), 'x': ('frscenes', 'FUNCSX', 'STARTX'), 'y': ('pdscenes', 'FUNCSY', 'STARTY'), 'z': ('scscenes', 'FUNCSZ', 'STARTZ')}
+MODS = {'s': ('scenes', 'FUNCS', 'START'), 't': ('scenes2', 'FUNCS2', 'START2'), 'u': ('scenes3', 'FUNCS3', 'START3'), 'v': ('stscenes', 'FUNCSV', 'STARTV'), 'w': ('shscenes', 'FUNCSW', 'STARTW'), 'x': ('frscenes', 'FUNCSX', 'STARTX'), 'y': ('pdscenes', 'FUNCSY', 'STARTY'), 'z': ('scscenes', 'FUNCSZ', 'STARTZ'), 'k': ('kdscenes', 'FUNCSK', 'STARTK')}
 def lookup(sid):
     mod, f, st = MODS[sid[0]]
     m = importlib.import_module(mod)
